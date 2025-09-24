@@ -6,30 +6,50 @@ export const dynamic = "force-dynamic";
 
 type Play = {
   gameId: string;
-  possession: string;
+  possession: string; // team abbr e.g. "BUF"
   playType: "field_goal" | "extra_point";
   result: "made" | "missed";
   distance?: number | null;
-  blocked?: boolean | null;
+  // NOTE: we intentionally ignore "blocked" on insert to avoid schema mismatch
 };
 
+function normalize(p: Play) {
+  return {
+    gameId: String(p.gameId),
+    possession: String(p.possession || "").toUpperCase(),
+    playType: p.playType === "extra_point" ? "extra_point" : "field_goal",
+    result: p.result === "made" ? "made" : "missed",
+    distance:
+      p.distance === undefined || p.distance === null || Number.isNaN(Number(p.distance))
+        ? null
+        : Number(p.distance),
+  };
+}
+
 async function doImport(season: number, week: number, plays: Play[]) {
-  // idempotent: wipe and re-insert week
+  // idempotent replace for the whole week
   await db.kickPlay.deleteMany({ where: { season, week } });
-  if (plays.length) {
-    await db.kickPlay.createMany({
-      data: plays.map(p => ({
-        season,
-        week,
-        gameId: p.gameId,
-        possession: p.possession.toUpperCase(),
-        playType: p.playType,
-        result: p.result,
-        distance: p.distance ?? null,
-        blocked: !!p.blocked,
-      })),
-    });
-  }
+
+  if (!plays.length) return 0;
+
+  // prepare rows and insert (skip fields that may not exist in your schema)
+  const rows = plays.map(normalize).map((r) => ({
+    season,
+    week,
+    gameId: r.gameId,
+    possession: r.possession,
+    playType: r.playType,
+    result: r.result,
+    distance: r.distance, // nullable OK
+  }));
+
+  // Insert in a single createMany. If you prefer batching, we can chunk into 200s.
+  const res = await db.kickPlay.createMany({
+    data: rows,
+    skipDuplicates: true, // in case you add a unique constraint later
+  });
+
+  return res.count ?? rows.length;
 }
 
 // POST /api/admin/import-plays?season=2025&week=1
@@ -38,38 +58,39 @@ export async function POST(req: Request) {
   const season = Number(url.searchParams.get("season") ?? 2025);
   const week = Number(url.searchParams.get("week") ?? 1);
 
-  // Only enforced if ADMIN_KEY is set in env
+  // Only enforced if ADMIN_KEY is set (you said you’re not using it now)
   const adminKey = req.headers.get("x-admin-key");
   if (process.env.ADMIN_KEY && adminKey !== process.env.ADMIN_KEY) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: unknown;
+  let plays: Play[] | undefined;
   try {
-    body = await req.json();
+    const body = await req.json();
+    plays = body?.plays;
   } catch {
     return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
   }
-  const plays = (body as any)?.plays as Play[] | undefined;
   if (!Array.isArray(plays)) {
     return NextResponse.json({ ok: false, error: "Body must include plays: Play[]" }, { status: 400 });
   }
 
-  await doImport(season, week, plays);
-  return NextResponse.json({ ok: true, season, week, inserted: plays.length });
+  try {
+    const inserted = await doImport(season, week, plays);
+    return NextResponse.json({ ok: true, season, week, inserted });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Prisma often includes helpful `.code` on the error; we can expose it if present
+    const code = (err as any)?.code;
+    return NextResponse.json({ ok: false, error: msg, code }, { status: 500 });
+  }
 }
 
-// GET helper so you can verify the route is live
+// GET helper to verify route works and see current count
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const season = Number(url.searchParams.get("season") ?? 2025);
   const week = Number(url.searchParams.get("week") ?? 1);
   const count = await db.kickPlay.count({ where: { season, week } });
-  return NextResponse.json({
-    ok: true,
-    season,
-    week,
-    count,
-    note: "POST plays to this same URL to (re)import for the week.",
-  });
+  return NextResponse.json({ ok: true, season, week, count });
 }

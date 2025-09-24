@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint"
   },
+  "engines": { "node": "22.x" },
   "dependencies": {
     "@prisma/client": "^6.16.2",
     "next": "15.5.4",

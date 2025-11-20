@@ -1,11 +1,9 @@
 import type { NextAuthOptions } from "next-auth";
-import EmailProvider from "next-auth/providers/email";
+import CredentialsProvider from "next-auth/providers/credentials";
+// If you want to keep working on email auth later, we can re-enable this:
+// import EmailProvider from "next-auth/providers/email";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { Resend } from "resend";
-
 import { db } from "./db";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as any,
@@ -16,53 +14,45 @@ export const authOptions: NextAuthOptions = {
   },
 
   providers: [
-    EmailProvider({
-      // We let *our* function send the email via Resend HTTP API
-      from: process.env.EMAIL_FROM!,
-      maxAge: 60 * 60 * 24, // 24 hours
+    // --- DEV: passwordless credentials login using email only ---
+    CredentialsProvider({
+      id: "dev-email",
+      name: "Email",
+      credentials: {
+        email: { label: "Email", type: "email" },
+      },
+      async authorize(credentials) {
+        const rawEmail = credentials?.email?.toString().trim().toLowerCase();
+        if (!rawEmail) return null;
 
-      async sendVerificationRequest({ identifier, url }) {
-        try {
-          if (!process.env.RESEND_API_KEY) {
-            throw new Error("Missing RESEND_API_KEY env var");
-          }
-          if (!process.env.EMAIL_FROM) {
-            throw new Error("Missing EMAIL_FROM env var");
-          }
+        // Find or create the user
+        let user = await db.user.findUnique({
+          where: { email: rawEmail },
+        });
 
-          const { error } = await resend.emails.send({
-            from: process.env.EMAIL_FROM!,
-            to: identifier,
-            subject: "Sign in to Kicker League",
-            html: `
-              <p>Hi,</p>
-              <p>Click the button below to sign in to <strong>Kicker League</strong>:</p>
-              <p><a href="${url}" style="
-                display:inline-block;
-                background:#a3e635;
-                color:#020617;
-                padding:10px 18px;
-                border-radius:999px;
-                text-decoration:none;
-                font-weight:600;
-              ">Sign in</a></p>
-              <p>Or copy and paste this link into your browser:</p>
-              <p><a href="${url}">${url}</a></p>
-              <p>If you didn&apos;t request this email, you can ignore it.</p>
-            `,
-            text: `Sign in to Kicker League:\n${url}\n\nIf you didn't request this, you can ignore this email.`,
+        if (!user) {
+          user = await db.user.create({
+            data: {
+              email: rawEmail,
+              name: rawEmail.split("@")[0],
+            },
           });
-
-          if (error) {
-            console.error("[NextAuth/Resend] Email send error:", error);
-            throw error;
-          }
-        } catch (err) {
-          console.error("[NextAuth] sendVerificationRequest failed:", err);
-          throw err;
         }
+
+        return { id: user.id, email: user.email, name: user.name ?? null };
       },
     }),
+
+    // --- FUTURE: real magic-link email login with Resend ---
+    /*
+    EmailProvider({
+      from: process.env.EMAIL_FROM!,
+      maxAge: 60 * 60 * 24,
+      async sendVerificationRequest({ identifier, url }) {
+        // We'll re-enable this once we can see server logs and Resend HTTP errors.
+      },
+    }),
+    */
   ],
 
   pages: {
@@ -78,11 +68,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
 
-  // Extra logging to Vercel if something still goes wrong
   debug: true,
-  events: {
-    error(error) {
-      console.error("[NextAuth event error]", error);
-    },
-  },
 };
+
+export default authOptions;

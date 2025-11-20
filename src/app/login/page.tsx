@@ -19,7 +19,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await signIn("email", {
+      const res = await signIn("dev-email", {
         email,
         callbackUrl: "/",
         redirect: false,
@@ -27,27 +27,29 @@ export default function LoginPage() {
 
       console.log("signIn result:", res);
 
-      // NextAuth sometimes returns null on success when redirect:false
       if (!res) {
-        setStatus("sent");
+        setStatus("error");
+        setError("Unknown error from sign-in.");
         return;
       }
 
       if (res.error) {
-        console.error("Email sign-in error:", res.error);
+        console.error("Credentials sign-in error:", res.error);
         setStatus("error");
-        setError("Unable to send magic link. Please try again in a minute.");
+        setError("Unable to sign in. Please try again.");
       } else {
         setStatus("sent");
+        // Manually redirect after successful sign-in
+        window.location.href = res.url ?? "/";
       }
     } catch (err) {
-      console.error("Email sign-in exception:", err);
+      console.error("Credentials sign-in exception:", err);
       setStatus("error");
-      setError("Unable to send magic link. Please try again later.");
+      setError("Unable to sign in. Please try again later.");
     }
   }
 
-  const disabled = status === "sending" || status === "sent";
+  const disabled = status === "sending";
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-50 px-4">
@@ -60,7 +62,8 @@ export default function LoginPage() {
             Sign in to Kicker League
           </h1>
           <p className="text-sm text-slate-400">
-            No passwords. Enter your email and we&apos;ll send you a magic link.
+            Dev login: enter your email and we&apos;ll log you in directly (no
+            email required).
           </p>
         </div>
 
@@ -83,23 +86,12 @@ export default function LoginPage() {
             </p>
           )}
 
-          {status === "sent" && (
-            <p className="text-sm text-lime-400 bg-lime-950/20 border border-lime-900/50 rounded-lg px-3 py-2">
-              Magic link sent. Check your email and click the link to finish
-              signing in.
-            </p>
-          )}
-
           <button
             type="submit"
             disabled={disabled}
             className="w-full inline-flex items-center justify-center rounded-xl bg-lime-500 text-slate-900 text-sm font-medium px-4 py-2.5 mt-2 shadow-lg shadow-lime-500/30 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-lime-400 transition-colors"
           >
-            {status === "sending"
-              ? "Sending magic link..."
-              : status === "sent"
-              ? "Magic link sent"
-              : "Send magic link"}
+            {status === "sending" ? "Signing in..." : "Sign in"}
           </button>
         </form>
 

@@ -1,4 +1,5 @@
 import type { NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { db } from "./db";
@@ -13,15 +14,16 @@ export const authOptions: NextAuthOptions = {
 
   providers: [
     EmailProvider({
+      // ✅ Resend SMTP via structured config
       server: {
         host: "smtp.resend.com",
         port: 587,
         auth: {
           user: "resend",
-          pass: process.env.RESEND_API_KEY!, // set in Vercel
+          pass: process.env.RESEND_API_KEY!, // we'll set this in Vercel
         },
       },
-      from: process.env.EMAIL_FROM!,        // set in Vercel
+      from: process.env.EMAIL_FROM!, // also set in Vercel
       maxAge: 60 * 60 * 24,
     }),
   ],
@@ -39,3 +41,6 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+// for the app route
+export default authOptions;

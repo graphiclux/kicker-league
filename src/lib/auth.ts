@@ -1,25 +1,27 @@
-import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
+// src/lib/auth.ts
+import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "./db";
 
 /**
- * Central Auth.js / NextAuth config
+ * Auth config for next-auth v4 + App Router.
+ * We use:
+ *  - EmailProvider for passwordless magic-link login
+ *  - PrismaAdapter with your existing Prisma client
+ *  - Database sessions
  *
- * - Email-only, passwordless "magic link" login
- * - Uses Prisma adapter with your existing database
- *
- * ENV you must set:
- *   AUTH_SECRET       = long random string
- *   EMAIL_SERVER      = SMTP connection string
- *   EMAIL_FROM        = From address, e.g. "Kicker League <no-reply@yourdomain.com>"
+ * Required env vars:
+ *   AUTH_SECRET
+ *   EMAIL_SERVER  (e.g. smtp://user:pass@smtp.host.com:587)
+ *   EMAIL_FROM    (e.g. 'Kicker League <no-reply@yourdomain.com>')
  */
-export const { auth, handlers, signIn, signOut } = NextAuth({
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as any,
   secret: process.env.AUTH_SECRET,
 
   session: {
-    strategy: "database", // store sessions in DB via Prisma
+    strategy: "database",
   },
 
   providers: [
@@ -36,11 +38,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
   callbacks: {
     async session({ session, user }) {
-      // Make sure we always have a user.id in the session
-      if (session.user) {
+      // Ensure we always expose the user id in the session
+      if (session.user && user) {
         (session.user as any).id = user.id;
       }
       return session;
     },
   },
-});
+};

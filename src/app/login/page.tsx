@@ -4,11 +4,11 @@ import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 
+type Status = "idle" | "sending" | "sent" | "error";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
-    "idle"
-  );
+  const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
@@ -18,17 +18,32 @@ export default function LoginPage() {
     setStatus("sending");
     setError(null);
 
-    const res = await signIn("email", {
-      email,
-      callbackUrl: "/",
-      redirect: false,
-    });
+    try {
+      const res = await signIn("email", {
+        email,
+        callbackUrl: "/",
+        redirect: false,
+      });
 
-    if (res?.error) {
+      console.log("signIn result:", res);
+
+      // NextAuth sometimes returns null on success when redirect:false
+      if (!res) {
+        setStatus("sent");
+        return;
+      }
+
+      if (res.error) {
+        console.error("Email sign-in error:", res.error);
+        setStatus("error");
+        setError("Unable to send magic link. Please try again in a minute.");
+      } else {
+        setStatus("sent");
+      }
+    } catch (err) {
+      console.error("Email sign-in exception:", err);
       setStatus("error");
-      setError("Unable to send magic link. Please try again in a minute.");
-    } else {
-      setStatus("sent");
+      setError("Unable to send magic link. Please try again later.");
     }
   }
 

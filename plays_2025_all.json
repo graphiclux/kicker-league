@@ -1,0 +1,17 @@
+{
+  "season": 2025,
+  "weeks": [
+    {
+      "week": 1,
+      "count": 131
+    },
+    {
+      "week": 2,
+      "count": 152
+    },
+    {
+      "week": 3,
+      "count": 148
+    }
+  ]
+}

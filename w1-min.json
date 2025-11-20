@@ -1,0 +1,6 @@
+﻿{
+  "plays": [
+    { "gameId": "TEST-W1", "possession": "BUF", "playType": "field_goal", "result": "missed", "distance": 27 },
+    { "gameId": "TEST-W1", "possession": "KC",  "playType": "extra_point", "result": "missed" }
+  ]
+}

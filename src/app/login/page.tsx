@@ -1,31 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useState, FormEvent } from "react";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data: session, status } = useSession();
-  const router = useRouter();
 
-  // If already logged in, bounce straight to dashboard
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/dashboard");
-    }
-  }, [status, router]);
-
-  async function submit(e: React.FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    // IMPORTANT: tell NextAuth where to go AFTER clicking the magic link
     const res = await signIn("email", {
       email,
-      callbackUrl: "/dashboard",
+      callbackUrl: "/dashboard", // after clicking magic link, go here
       redirect: false,
     });
 
@@ -35,15 +24,6 @@ export default function LoginPage() {
     } else {
       setSent(true);
     }
-  }
-
-  // While checking session, show a tiny loading state
-  if (status === "loading") {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50">
-        <p className="text-sm text-slate-400">Checking your session…</p>
-      </main>
-    );
   }
 
   return (

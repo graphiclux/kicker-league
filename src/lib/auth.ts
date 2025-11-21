@@ -1,58 +1,36 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-// If you want to keep working on email auth later, we can re-enable this:
-// import EmailProvider from "next-auth/providers/email";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { db } from "./db";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db) as any,
+  // Use JWT-based sessions (no DB)
   secret: process.env.AUTH_SECRET,
-
   session: {
-    strategy: "database",
+    strategy: "jwt",
   },
 
   providers: [
-    // --- DEV: passwordless credentials login using email only ---
     CredentialsProvider({
       id: "dev-email",
-      name: "Email",
+      name: "Dev Email Login",
       credentials: {
         email: { label: "Email", type: "email" },
       },
       async authorize(credentials) {
-        const rawEmail = credentials?.email?.toString().trim().toLowerCase();
-        if (!rawEmail) return null;
+        const raw = credentials?.email;
+        const email = typeof raw === "string" ? raw.trim().toLowerCase() : "";
 
-        // Find or create the user
-        let user = await db.user.findUnique({
-          where: { email: rawEmail },
-        });
+        if (!email) return null;
 
-        if (!user) {
-          user = await db.user.create({
-            data: {
-              email: rawEmail,
-              name: rawEmail.split("@")[0],
-            },
-          });
-        }
+        // Dev-only: treat the email itself as the user identity
+        const name = email.split("@")[0];
 
-        return { id: user.id, email: user.email, name: user.name ?? null };
+        return {
+          id: email,     // use email as the "id" in the token
+          email,
+          name,
+        };
       },
     }),
-
-    // --- FUTURE: real magic-link email login with Resend ---
-    /*
-    EmailProvider({
-      from: process.env.EMAIL_FROM!,
-      maxAge: 60 * 60 * 24,
-      async sendVerificationRequest({ identifier, url }) {
-        // We'll re-enable this once we can see server logs and Resend HTTP errors.
-      },
-    }),
-    */
   ],
 
   pages: {
@@ -60,9 +38,20 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async session({ session, user }) {
-      if (session.user && user) {
-        (session.user as any).id = user.id;
+    async jwt({ token, user }) {
+      // On first sign-in, copy user info into the token
+      if (user) {
+        token.sub = user.id as string;
+        token.email = user.email;
+        token.name = user.name;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.email = token.email as string;
+        session.user.name = (token.name as string) ?? null;
+        (session.user as any).id = token.sub;
       }
       return session;
     },

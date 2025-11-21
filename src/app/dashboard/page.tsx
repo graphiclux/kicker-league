@@ -13,6 +13,7 @@ export default async function DashboardPage() {
     | Awaited<ReturnType<typeof prisma.league.findMany>>
     | [] = [];
   let loadError: string | null = null;
+  let loadErrorDetail: string | null = null;
 
   try {
     leagues = await prisma.league.findMany({
@@ -31,10 +32,26 @@ export default async function DashboardPage() {
         createdAt: "desc",
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[Dashboard] Failed to load leagues", err);
+
     loadError =
       "We couldn't load your leagues from the database. Please try again in a moment.";
+
+    if (err && typeof err === "object") {
+      if ("message" in err && typeof err.message === "string") {
+        loadErrorDetail = err.message;
+      } else {
+        try {
+          loadErrorDetail = JSON.stringify(err);
+        } catch {
+          loadErrorDetail = String(err);
+        }
+      }
+    } else {
+      loadErrorDetail = String(err);
+    }
+
     leagues = [];
   }
 
@@ -68,8 +85,13 @@ export default async function DashboardPage() {
 
         {/* Error message if DB failed */}
         {loadError && (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-            {loadError}
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 space-y-1">
+            <div>{loadError}</div>
+            {loadErrorDetail && (
+              <pre className="mt-1 max-h-40 overflow-auto rounded bg-slate-950/60 p-2 text-[10px] text-amber-200">
+{loadErrorDetail}
+              </pre>
+            )}
           </div>
         )}
 
@@ -127,9 +149,9 @@ export default async function DashboardPage() {
               );
             })}
           </section>
-        ) : (
+        ) : !loadError ? (
           <EmptyState />
-        )}
+        ) : null}
       </div>
     </main>
   );

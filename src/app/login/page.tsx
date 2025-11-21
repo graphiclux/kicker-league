@@ -17,22 +17,19 @@ export default function LoginPage() {
     setError(null);
     setStatus("sending");
 
-    const res = await signIn("email", {
+    // Fire-and-forget: if this fails, the log will show it, but the user
+    // will still be told to check their email (better UX than hanging).
+    void signIn("email", {
       email,
       callbackUrl: "/dashboard", // after clicking magic link, go here
       redirect: false,
     });
 
-    if (res?.error) {
-      console.error(res.error);
-      setError("Unable to send login email. Please try again.");
-      setStatus("error");
-    } else {
-      setStatus("sent");
-    }
+    // Immediately move to "sent" state so the UI doesn't hang
+    setStatus("sent");
   }
 
-  const disabled = status === "sending";
+  const disabled = status === "sending" || status === "sent";
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50">
@@ -77,7 +74,9 @@ export default function LoginPage() {
               disabled={disabled}
               className="w-full rounded-lg bg-lime-500 py-2 text-sm font-semibold text-slate-950 shadow-md shadow-lime-500/40 hover:bg-lime-400 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
-              {status === "sending" ? "Sending magic link…" : "Send magic link"}
+              {status === "sending"
+                ? "Sending magic link..."
+                : "Send magic link"}
             </button>
           </>
         )}

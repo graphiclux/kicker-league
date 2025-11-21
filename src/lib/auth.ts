@@ -1,8 +1,8 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { db } from "./db";
 
 export const authOptions: NextAuthOptions = {
-  // Use JWT-based sessions (no DB)
   secret: process.env.AUTH_SECRET,
   session: {
     strategy: "jwt",
@@ -10,24 +10,36 @@ export const authOptions: NextAuthOptions = {
 
   providers: [
     CredentialsProvider({
-      id: "dev-email",
+      id: "email-login",
       name: "Dev Email Login",
       credentials: {
         email: { label: "Email", type: "email" },
       },
       async authorize(credentials) {
         const raw = credentials?.email;
-        const email = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+        const email =
+          typeof raw === "string" ? raw.trim().toLowerCase() : "";
 
         if (!email) return null;
 
-        // Dev-only: treat the email itself as the user identity
-        const name = email.split("@")[0];
+        // Find or create a real User in Prisma
+        let user = await db.user.findUnique({
+          where: { email },
+        });
+
+        if (!user) {
+          user = await db.user.create({
+            data: {
+              email,
+              name: email.split("@")[0],
+            },
+          });
+        }
 
         return {
-          id: email,     // use email as the "id" in the token
-          email,
-          name,
+          id: user.id,
+          email: user.email,
+          name: user.name ?? null,
         };
       },
     }),
@@ -39,7 +51,7 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      // On first sign-in, copy user info into the token
+      // On first sign-in, copy Prisma user into the token
       if (user) {
         token.sub = user.id as string;
         token.email = user.email;
@@ -49,9 +61,9 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.email = token.email as string;
-        session.user.name = (token.name as string) ?? null;
-        (session.user as any).id = token.sub;
+        session.user.email = (token.email as string) ?? undefined;
+        session.user.name = (token.name as string) ?? undefined;
+        (session.user as any).id = token.sub; // expose Prisma user id
       }
       return session;
     },

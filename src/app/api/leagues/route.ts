@@ -1,67 +1,47 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 /**
  * POST /api/leagues
- * Body: { name: string, seasonYear: number, commissionerEmail: string, commissionerName?: string }
+ * Body: { name: string, seasonYear: number }
+ * Creates a league where the current user is the commissioner and a member.
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id as string | undefined;
+
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const { name, seasonYear } = body || {};
+
+  if (!name || !seasonYear) {
+    return NextResponse.json(
+      { ok: false, error: "Missing name or seasonYear" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const body = await req.json();
-    const { name, seasonYear, commissionerEmail, commissionerName } = body || {};
-
-    if (!name || !seasonYear || !commissionerEmail) {
-      return NextResponse.json(
-        { ok: false, error: "Missing name, seasonYear, or commissionerEmail" },
-        { status: 400 }
-      );
-    }
-
-    // Upsert commissioner user
-    const user = await db.user.upsert({
-      where: { email: commissionerEmail },
-      update: { name: commissionerName ?? undefined },
-      create: { email: commissionerEmail, name: commissionerName ?? null },
-    });
-
-    // Create league
     const league = await db.league.create({
       data: {
         name,
-        seasonYear,
-        commissionerId: user.id,
-      },
-      select: {
-        id: true,
-        name: true,
-        seasonYear: true,
-        commissionerId: true,
-        createdAt: true,
+        seasonYear: Number(seasonYear),
+        commissioner: { connect: { id: userId } },
+        members: { connect: { id: userId } },
       },
     });
 
     return NextResponse.json({ ok: true, league });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
-  }
-}
-
-/**
- * GET /api/leagues
- * Optional query: ?season=2025
- */
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const season = searchParams.get("season");
-    const where = season ? { seasonYear: Number(season) } : {};
-    const leagues = await db.league.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, seasonYear: true, commissionerId: true, createdAt: true },
-    });
-    return NextResponse.json({ ok: true, leagues });
-  } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    console.error("Create league error:", err);
+    return NextResponse.json(
+      { ok: false, error: "Failed to create league" },
+      { status: 500 }
+    );
   }
 }

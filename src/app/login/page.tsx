@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 
-type Status = "idle" | "sending" | "sent" | "error";
+type Status = "idle" | "sending" | "error";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -19,9 +19,9 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await signIn("dev-email", {
+      const res = await signIn("email-login", {
         email,
-        callbackUrl: "/",
+        callbackUrl: "/dashboard",
         redirect: false,
       });
 
@@ -38,9 +38,8 @@ export default function LoginPage() {
         setStatus("error");
         setError("Unable to sign in. Please try again.");
       } else {
-        setStatus("sent");
-        // Manually redirect after successful sign-in
-        window.location.href = res.url ?? "/";
+        // success → go to dashboard
+        window.location.href = res.url ?? "/dashboard";
       }
     } catch (err) {
       console.error("Credentials sign-in exception:", err);
@@ -63,7 +62,7 @@ export default function LoginPage() {
           </h1>
           <p className="text-sm text-slate-400">
             Dev login: enter your email and we&apos;ll log you in directly (no
-            email required).
+            email will be sent).
           </p>
         </div>
 

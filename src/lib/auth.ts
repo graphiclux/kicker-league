@@ -32,4 +32,41 @@ export const authOptions: NextAuthOptions = {
                 <a href="${url}" 
                    style="display:inline-block;
                           padding:12px 20px;
-                          background:#a3f
+                          background:#a3ff12;
+                          color:#000;
+                          border-radius:8px;
+                          text-decoration:none;">
+                  Sign in
+                </a>
+                <p style="margin-top:20px; font-size:12px; opacity:0.7;">
+                  This link expires in 10 minutes.
+                </p>
+              </div>
+            `,
+          });
+        } catch (err) {
+          console.error("Resend error:", err);
+          throw new Error("Email could not be sent");
+        }
+      },
+    }),
+  ],
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) token.sub = user.id;
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as any).id = token.sub;
+      }
+      return session;
+    },
+  },
+
+  pages: {
+    signIn: "/login",
+  },
+};

@@ -17,19 +17,32 @@ export default function LoginPage() {
     setError(null);
     setStatus("sending");
 
-    // Fire-and-forget: if this fails, the log will show it, but the user
-    // will still be told to check their email (better UX than hanging).
-    void signIn("email", {
-      email,
-      callbackUrl: "/dashboard", // after clicking magic link, go here
-      redirect: false,
-    });
+    try {
+      const res = await signIn("email", {
+        email,
+        callbackUrl: "/dashboard", // after clicking magic link, go here
+        redirect: false,
+      });
 
-    // Immediately move to "sent" state so the UI doesn't hang
-    setStatus("sent");
+      console.log("signIn(email) result:", res);
+
+      if (res?.error) {
+        console.error("NextAuth email error:", res.error);
+        setError("Unable to send login email. Please try again.");
+        setStatus("error");
+        return;
+      }
+
+      // Success: show "check your email"
+      setStatus("sent");
+    } catch (err) {
+      console.error("signIn(email) threw:", err);
+      setError("Unable to send login email. Please try again later.");
+      setStatus("error");
+    }
   }
 
-  const disabled = status === "sending" || status === "sent";
+  const disabled = status === "sending";
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50">

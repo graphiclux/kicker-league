@@ -6,11 +6,11 @@ import { redirect } from "next/navigation";
 export async function requireUserId() {
   const session = await getServerSession(authOptions);
 
-  const userId = (session?.user as any)?.id;
+  const userId = (session?.user as any)?.id ?? null;
 
   if (!userId) {
     redirect("/login");
   }
 
-  return { session, userId };
+  return { session: session!, userId: String(userId) };
 }

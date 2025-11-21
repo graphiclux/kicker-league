@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       const res = await signIn("email", {
         email,
-        callbackUrl: "/dashboard", // after clicking magic link, go here
+        callbackUrl: "/dashboard",
         redirect: false,
       });
 
@@ -33,7 +33,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Success: show "check your email"
       setStatus("sent");
     } catch (err) {
       console.error("signIn(email) threw:", err);

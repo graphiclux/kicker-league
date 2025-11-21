@@ -56,7 +56,9 @@ input:focus-visible {
 /* Small utility so cards look consistent even without full Tailwind */
 .card {
   border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.4); /* slate-400/40 */
-  background: rgba(15, 23, 42, 0.85); /* slate-900/85 */
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.35); /* slate-400/35 */
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.95), #020617);
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(15, 23, 42, 0.9);
 }

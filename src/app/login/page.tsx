@@ -1,8 +1,8 @@
+// src/app/login/page.tsx
 "use client";
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
-import Link from "next/link";
 
 type Status = "idle" | "sending" | "error";
 
@@ -52,9 +52,9 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-50 px-4">
-      <div className="w-full max-w-md space-y-6 rounded-2xl bg-slate-900/70 border border-slate-800 p-8 shadow-xl shadow-black/40 backdrop-blur">
+      <div className="w-full max-w-md space-y-6 rounded-2xl bg-slate-950/70 border border-slate-800 p-8 shadow-xl shadow-black/40 backdrop-blur">
         <div className="space-y-2 text-center">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-lime-500/10 border border-lime-500/30 text-lime-400 text-2xl">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-lime-500/10 border border-lime-500/30 text-lime-400 text-2xl">
             🥾
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -62,25 +62,32 @@ export default function LoginPage() {
           </h1>
           <p className="text-sm text-slate-400">
             Dev login: enter your email and we&apos;ll log you in directly (no
-            email will be sent).
+            magic link).
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-sm font-medium text-slate-200">
-            Email address
+          <div className="space-y-1">
+            <label
+              htmlFor="email"
+              className="block text-xs font-medium text-slate-300"
+            >
+              Email
+            </label>
             <input
+              id="email"
               type="email"
-              required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-50 placeholder:text-slate-500 outline-none focus:border-lime-400 focus:ring-2 focus:ring-lime-500/40 transition"
+              disabled={disabled}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-lime-500/80 focus:border-lime-500"
               placeholder="you@example.com"
             />
-          </label>
+          </div>
 
           {error && (
-            <p className="text-sm text-red-400 bg-red-950/40 border border-red-900/60 rounded-lg px-3 py-2">
+            <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/70 rounded-md px-2 py-1">
               {error}
             </p>
           )}
@@ -88,17 +95,11 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={disabled}
-            className="w-full inline-flex items-center justify-center rounded-xl bg-lime-500 text-slate-900 text-sm font-medium px-4 py-2.5 mt-2 shadow-lg shadow-lime-500/30 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-lime-400 transition-colors"
+            className="flex w-full items-center justify-center rounded-lg bg-lime-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-lime-500/40 transition hover:bg-lime-400 disabled:opacity-60"
           >
-            {status === "sending" ? "Signing in..." : "Sign in"}
+            {status === "sending" ? "Signing you in..." : "Sign in"}
           </button>
         </form>
-
-        <p className="text-xs text-center text-slate-500">
-          <Link href="/" className="text-slate-300 hover:text-lime-300">
-            ← Back to home
-          </Link>
-        </p>
       </div>
     </main>
   );

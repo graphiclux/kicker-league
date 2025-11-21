@@ -3,7 +3,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "./db";
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.AUTH_SECRET,
+  // Use AUTH_SECRET if set; otherwise fall back to NEXTAUTH_SECRET
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
   },
@@ -36,6 +37,7 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
+        // This object becomes `user` in jwt/session callbacks
         return {
           id: user.id,
           email: user.email,

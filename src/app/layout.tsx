@@ -13,7 +13,7 @@ const geistMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kicker League",
+  title: "And It's No Good",
   description: "A tiny fantasy game where only the kickers matter.",
 };
 

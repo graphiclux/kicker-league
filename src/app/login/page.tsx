@@ -3,14 +3,19 @@
 import { useState, FormEvent } from "react";
 import { signIn } from "next-auth/react";
 
+type Status = "idle" | "sending" | "sent" | "error";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!email.trim() || status === "sending") return;
+
     setError(null);
+    setStatus("sending");
 
     const res = await signIn("email", {
       email,
@@ -21,10 +26,13 @@ export default function LoginPage() {
     if (res?.error) {
       console.error(res.error);
       setError("Unable to send login email. Please try again.");
+      setStatus("error");
     } else {
-      setSent(true);
+      setStatus("sent");
     }
   }
+
+  const disabled = status === "sending";
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50">
@@ -34,7 +42,7 @@ export default function LoginPage() {
       >
         <h1 className="text-xl font-semibold">Sign in</h1>
 
-        {sent ? (
+        {status === "sent" ? (
           <p className="text-sm text-lime-300">
             Check your email for a magic link to sign in.
           </p>
@@ -54,7 +62,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500/80 focus:border-lime-400"
               />
             </div>
 
@@ -66,9 +74,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-lime-500 py-2 text-sm font-semibold text-slate-950 hover:bg-lime-400"
+              disabled={disabled}
+              className="w-full rounded-lg bg-lime-500 py-2 text-sm font-semibold text-slate-950 shadow-md shadow-lime-500/40 hover:bg-lime-400 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
-              Send magic link
+              {status === "sending" ? "Sending magic link…" : "Send magic link"}
             </button>
           </>
         )}

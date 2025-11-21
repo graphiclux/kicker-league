@@ -1,120 +1,218 @@
-"use client";
-import { useEffect, useMemo, useState } from "react";
+// app/leagues/[id]/page.tsx
+import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session-user";
+import { notFound } from "next/navigation";
 
-type Row = {
-  leagueTeamId: string;
-  nflTeam: string;
-  nflTeamName: string;
-  owner: { name: string | null; email: string };
-  draftSlot: number;
-  points: number;
-  breakdown: { desc: string; pts: number }[];
-};
+interface LeaguePageProps {
+  params: { id: string };
+}
 
-export default function LeaguePage({ params, searchParams }: {
-  params: { leagueId: string },
-  searchParams?: { season?: string; week?: string }
-}) {
-  const leagueId = params.leagueId;
-  const [season, setSeason] = useState<number>(Number(searchParams?.season ?? 2025));
-  const [week, setWeek] = useState<number>(Number(searchParams?.week ?? 1));
-  const [data, setData] = useState<{
-    ok: boolean;
-    league?: { id: string; name: string; seasonYear: number; maxTeams: number };
-    rows?: Row[];
-    error?: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(false);
+export default async function LeaguePage({ params }: LeaguePageProps) {
+  const { userId, session } = await requireUserId();
 
-  const url = useMemo(() => {
-    const q = new URLSearchParams({ season: String(season), week: String(week) });
-    return `/api/leagues/${leagueId}/leaderboard?` + q.toString();
-  }, [leagueId, season, week]);
+  const league = await prisma.league.findUnique({
+    where: { id: params.id },
+    include: {
+      commissioner: true,
+      members: true,
+      teams: {
+        include: {
+          owner: true,
+        },
+      },
+    },
+  });
 
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await fetch(url, { cache: "no-store" });
-      const json = await res.json();
-      setData(json);
-    } catch (e: any) {
-      setData({ ok: false, error: e?.message ?? "Failed to load" });
-    } finally {
-      setLoading(false);
-    }
+  if (!league) {
+    notFound();
   }
-  useEffect(() => { load(); }, [url]);
+
+  const isCommissioner = league.commissionerId === userId;
+  const userTeam = league.teams.find((t) => t.ownerId === userId) ?? null;
+  const isMember = league.members.some((m) => m.id === userId);
+
+  const displayName =
+    (session.user as any)?.name ??
+    (session.user as any)?.email ??
+    "You";
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-end justify-between gap-4 mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">{data?.league?.name ?? "League"} — Leaderboard</h1>
-          <p className="text-sm text-gray-500">Season {season} • Week {week}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm">Season&nbsp;
-            <input className="border rounded px-2 py-1 w-24" type="number"
-              value={season} onChange={(e) => setSeason(Number(e.target.value))} />
-          </label>
-          <label className="text-sm">Week&nbsp;
-            <input className="border rounded px-2 py-1 w-20" type="number" min={1} max={18}
-              value={week} onChange={(e) => setWeek(Number(e.target.value))} />
-          </label>
-          <button onClick={load} className="px-3 py-2 rounded bg-black text-white disabled:opacity-50" disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </button>
-        </div>
-      </div>
+    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100">
+      <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
+        {/* Header */}
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+              Kicker League
+            </p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight">
+              {league.name}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <span className="inline-flex items-center rounded-full bg-slate-900/80 px-2.5 py-0.5 ring-1 ring-slate-700/80">
+                Season{" "}
+                <span className="ml-1 font-semibold text-lime-300">
+                  {league.seasonYear}
+                </span>
+              </span>
+              <span className="inline-flex items-center rounded-full bg-slate-900/80 px-2.5 py-0.5 ring-1 ring-slate-700/80">
+                Commissioner{" "}
+                <span className="ml-1 font-medium text-slate-200">
+                  {league.commissioner.name ?? league.commissioner.email}
+                </span>
+              </span>
+            </div>
+          </div>
 
-      {!data?.ok && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700">
-          {data?.error ?? "Failed to load leaderboard"}
-        </div>
-      )}
+          {isCommissioner && (
+            <span className="inline-flex items-center rounded-full bg-lime-500/10 px-3 py-1 text-xs font-semibold text-lime-400 ring-1 ring-inset ring-lime-500/40">
+              You are the commissioner
+            </span>
+          )}
+        </header>
 
-      {data?.ok && (data.rows?.length ?? 0) === 0 && (
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
-          No teams yet. Join the league and pick a team.
-        </div>
-      )}
-
-      {data?.ok && (data.rows?.length ?? 0) > 0 && (
-        <div className="space-y-3">
-          {data!.rows!.map((r, i) => (
-            <div key={r.leagueTeamId} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="text-xl font-bold w-6 text-right">{i + 1}</div>
-                  <div>
-                    <div className="font-semibold">{r.nflTeam} — {r.nflTeamName}</div>
-                    <div className="text-sm text-gray-500">
-                      Owner: {r.owner.name ?? r.owner.email} • Draft #{r.draftSlot}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-2xl font-bold">{r.points}</div>
+        {/* Layout: teams + members / sidebar */}
+        <section className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
+          {/* Left side: Teams + members */}
+          <div className="space-y-4">
+            {/* Teams */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-slate-100">
+                  Teams
+                </h2>
+                <span className="text-xs text-slate-500">
+                  {league.teams.length} team
+                  {league.teams.length === 1 ? "" : "s"}
+                </span>
               </div>
 
-              {r.breakdown.length > 0 ? (
-                <div className="mt-3">
-                  <div className="text-sm font-medium mb-1">Play breakdown</div>
-                  <ul className="text-sm list-disc pl-5 space-y-1">
-                    {r.breakdown.map((b, idx) => (
-                      <li key={idx} className="flex justify-between">
-                        <span>{b.desc}</span>
-                        <span className="font-semibold">{b.pts > 0 ? `+${b.pts}` : b.pts}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {league.teams.length === 0 ? (
+                <p className="mt-3 text-xs text-slate-400">
+                  No teams yet.{" "}
+                  {isCommissioner
+                    ? "Use the commissioner tools to start adding teams."
+                    : "Waiting on the commissioner to set things up."}
+                </p>
               ) : (
-                <div className="mt-3 text-sm text-gray-500">No qualifying plays this week.</div>
+                <ul className="mt-3 space-y-2">
+                  {league.teams.map((team) => {
+                    const isUsersTeam = team.ownerId === userId;
+
+                    return (
+                      <li
+                        key={team.id}
+                        className="flex items-center justify-between rounded-lg bg-slate-950/60 px-3 py-2 text-sm"
+                      >
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate font-medium text-slate-100">
+                            {team.nflTeam} {/* or team.name if you later add one */}
+                          </span>
+                          <span className="truncate text-xs text-slate-500">
+                            {team.owner
+                              ? `Owner: ${
+                                  team.owner.name ?? team.owner.email
+                                }`
+                              : "Unassigned"}
+                          </span>
+                        </div>
+                        {isUsersTeam && (
+                          <span className="ml-3 inline-flex items-center rounded-full bg-lime-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-lime-300 ring-1 ring-inset ring-lime-500/40">
+                            Your team
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+
+            {/* Members */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+              <h2 className="text-sm font-semibold text-slate-100">
+                League members
+              </h2>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {league.members.map((member) => (
+                  <li
+                    key={member.id}
+                    className="flex items-center justify-between rounded-lg bg-slate-950/60 px-3 py-2 text-xs"
+                  >
+                    <span className="truncate text-slate-200">
+                      {member.name ?? member.email}
+                    </span>
+                    {member.id === league.commissionerId && (
+                      <span className="ml-3 inline-flex items-center rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-lime-300">
+                        Commissioner
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Right side: Your status + commissioner tools */}
+          <aside className="space-y-4">
+            {/* Your status */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+              <h2 className="text-sm font-semibold text-slate-100">
+                Your status
+              </h2>
+              <p className="mt-2 text-xs text-slate-400">
+                {displayName},{" "}
+                <span className="font-semibold text-lime-300">
+                  {isCommissioner
+                    ? "you are the commissioner of this league."
+                    : isMember
+                    ? "you are a member of this league."
+                    : "you are not currently in this league."}
+                </span>
+              </p>
+
+              {userTeam ? (
+                <div className="mt-3 rounded-lg bg-slate-950/80 px-3 py-2 text-xs">
+                  <p className="text-slate-400">Your team</p>
+                  <p className="mt-1 font-medium text-slate-100">
+                    {userTeam.nflTeam}
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-slate-500">
+                  You don&apos;t have a team yet. Team creation is coming next.
+                </p>
+              )}
+            </div>
+
+            {/* Commissioner tools (placeholder) */}
+            {isCommissioner && (
+              <div className="rounded-xl border border-lime-500/40 bg-slate-900/80 p-4 shadow-[0_0_25px_rgba(190,242,100,0.15)]">
+                <h2 className="text-sm font-semibold text-lime-300">
+                  Commissioner tools
+                </h2>
+                <p className="mt-2 text-xs text-slate-300">
+                  Actions only you can take. We&apos;ll wire these up next.
+                </p>
+                <ul className="mt-3 space-y-2 text-xs text-slate-100">
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-lime-400" />
+                    Invite players to this league
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-lime-400" />
+                    Create & assign league teams
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-lime-400" />
+                    Configure scoring & season rules
+                  </li>
+                </ul>
+              </div>
+            )}
+          </aside>
+        </section>
+      </div>
+    </main>
   );
 }

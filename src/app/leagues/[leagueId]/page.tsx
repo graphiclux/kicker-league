@@ -1,17 +1,17 @@
-// app/leagues/[id]/page.tsx
+// app/leagues/[leagueId]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session-user";
 import { notFound } from "next/navigation";
 
 interface LeaguePageProps {
-  params: { id: string };
+  params: { leagueId: string };
 }
 
 export default async function LeaguePage({ params }: LeaguePageProps) {
   const { userId, session } = await requireUserId();
 
   const league = await prisma.league.findUnique({
-    where: { id: params.id },
+    where: { id: params.leagueId },
     include: {
       commissioner: true,
       members: true,
@@ -106,7 +106,7 @@ export default async function LeaguePage({ params }: LeaguePageProps) {
                       >
                         <div className="flex min-w-0 flex-col">
                           <span className="truncate font-medium text-slate-100">
-                            {team.nflTeam} {/* or team.name if you later add one */}
+                            {team.nflTeam}
                           </span>
                           <span className="truncate text-xs text-slate-500">
                             {team.owner

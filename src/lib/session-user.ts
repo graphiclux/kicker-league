@@ -1,21 +1,17 @@
 // src/lib/session-user.ts
-import { auth } from "@/auth"; // adjust if your auth file is in a different place
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export async function requireUserId() {
-  const session = await auth();
+  // Uses NextAuth v4 getServerSession with our authOptions
+  const session = await getServerSession(authOptions);
 
-  const rawUser = session?.user as any;
-
-  const userId =
-    rawUser?.id ??
-    rawUser?.userId ??
-    rawUser?.sub ??
-    null;
+  const userId = (session?.user as any)?.id ?? null;
 
   if (!userId) {
-    // Not logged in → send them back to sign in
-    redirect("/auth/signin"); // change to your actual sign-in route if different
+    // Not logged in → send them to the login page
+    redirect("/login"); // this matches your existing /login page
   }
 
   return { session, userId: String(userId) };

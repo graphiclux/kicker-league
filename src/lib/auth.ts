@@ -1,7 +1,6 @@
 // src/lib/auth.ts
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { db } from "./db";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
@@ -24,24 +23,14 @@ export const authOptions: NextAuthOptions = {
 
         if (!email) return null;
 
-        // Find or create user
-        let user = await db.user.findUnique({
-          where: { email },
-        });
-
-        if (!user) {
-          user = await db.user.create({
-            data: {
-              email,
-              name: email.split("@")[0],
-            },
-          });
-        }
+        // 🚧 DEV-ONLY: no DB, just fabricate a user from the email.
+        // The "id" is deterministic so requireUserId() still works.
+        const name = email.split("@")[0] || "User";
 
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name ?? null,
+          id: email,        // use email as a stable ID for now
+          email,
+          name,
         };
       },
     }),
@@ -60,17 +49,17 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-
     async session({ session, token }) {
       if (session.user) {
         session.user.email = (token.email as string) ?? undefined;
         session.user.name = (token.name as string) ?? undefined;
-        (session.user as any).id = token.sub;
+        (session.user as any).id = token.sub; // expose "id" (email) to server
       }
       return session;
     },
   },
 
+  // Helpful while we’re wiring everything up
   debug: process.env.NODE_ENV !== "production",
 };
 

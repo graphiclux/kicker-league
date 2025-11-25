@@ -1,24 +1,34 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { getSafeCallbackUrl } from "@/lib/redirect";
-
-export const dynamic = "force-dynamic";
-
-type Status = "idle" | "sending" | "error";
 
 const isDevEnv =
   process.env.NODE_ENV !== "production" ||
   process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === "true";
 
-export default function LoginPage() {
+export default function LoginPageWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center px-4">
+          <p className="text-xs text-slate-400">Loading...</p>
+        </main>
+      }
+    >
+      <LoginPageInner />
+    </Suspense>
+  );
+}
+
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
   const callbackUrlParam = searchParams.get("callbackUrl");
@@ -51,8 +61,6 @@ export default function LoginPage() {
         callbackUrl,
       });
 
-      // In most cases redirect: true will navigate away,
-      // but if it doesn't, we check for an error:
       if (res && res.error) {
         console.error("[Dev Login] signIn error:", res.error);
         setStatus("error");

@@ -33,63 +33,45 @@ export default async function AppLayout({ children }: AppLayoutProps) {
 
       <div className="flex min-h-screen flex-col">
         {/* Top navigation */}
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-10">
-            {/* Left: Logo + app name */}
-            <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard"
-                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-lime-500/10 shadow-sm ring-1 ring-lime-400/50"
-              >
-                {/* Simple kicker icon */}
-                <div className="relative h-6 w-6">
-                  <span className="absolute inset-0 rounded-full border-2 border-lime-500" />
-                  <span className="absolute left-1/2 top-1/2 h-4 w-[2px] -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-full bg-lime-500" />
-                </div>
-              </Link>
+        <header
+  className="sticky top-0 z-30 border-b border-slate-200"
+  style={{ backgroundColor: "#faf8f4" }}
+>
+  <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+    {/* Left: AING logo links back to dashboard */}
+    <Link href="/dashboard" className="relative h-16 w-16 sm:h-20 sm:w-20">
+      {/* If you want, you can switch to next/image like on the landing page */}
+      <span className="sr-only">Go to dashboard</span>
+      <img
+        src="/aing-logo.png"
+        alt="And It's No Good logo"
+        className="h-full w-full object-contain"
+      />
+    </Link>
 
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Kicker League
-                  </span>
-                  <span className="rounded-full bg-lime-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-lime-700">
-                    Beta
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Manage your kicker-only fantasy leagues.
-                </p>
-              </div>
-            </div>
+    {/* Right: user info + nav */}
+    <div className="flex items-center gap-4">
+      <span className="hidden text-sm font-medium text-slate-700 sm:inline">
+        {user?.email}
+      </span>
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:border-lime-400 hover:text-lime-700 transition-colors"
+      >
+        Dashboard
+      </Link>
+      <form action="/api/auth/signout" method="post">
+        <button
+          type="submit"
+          className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-900 hover:text-white transition-colors"
+        >
+          Sign out
+        </button>
+      </form>
+    </div>
+  </div>
+</header>
 
-            {/* Right: user info */}
-            <div className="flex items-center gap-3">
-              <div className="hidden text-right text-xs sm:block">
-                <div className="font-medium text-slate-900">{name}</div>
-                {email && (
-                  <div className="text-[11px] text-slate-500">{email}</div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-lime-400 to-lime-500 text-xs font-bold text-white shadow">
-                  {initials}
-                </div>
-
-                {/* Simple sign-out form using next-auth route */}
-                <form action="/api/auth/signout" method="post" className="hidden sm:block">
-                  <button
-                    type="submit"
-                    className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/60"
-                  >
-                    Sign out
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </header>
 
         {/* Main content container */}
         <main className="mx-auto flex w-full max-w-6xl flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-10">

@@ -3,13 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session-user";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 interface LeaguePageProps {
   params: { leagueId: string };
 }
 
 export default async function LeaguePage({ params }: LeaguePageProps) {
-  const leaguePath = `/leagues/${params.leagueId}`;
-  const { userId, session } = await requireUserId(leaguePath);
+const leaguePath = `/leagues/${params.leagueId}`;
+const { userId, session } = await requireUserId(leaguePath);
+
 
   const league = await prisma.league.findUnique({
     where: { id: params.leagueId },

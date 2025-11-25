@@ -51,7 +51,10 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-lime-50 to-white text-slate-900">
       {/* Top bar with big logo only */}
-      <header className="border-b border-slate-200" style={{ backgroundColor: "#faf8f4" }}>
+      <header
+        className="border-b border-slate-200"
+        style={{ backgroundColor: "#faf8f4" }}
+      >
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="relative h-24 w-24 sm:h-28 sm:w-28">
             <Image
@@ -71,7 +74,6 @@ export default function Home() {
           </Link>
         </div>
       </header>
-
 
       {/* Hero area */}
       <div className="relative">
@@ -124,8 +126,9 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right: auth card */}
+            {/* Right: auth + sample matchup */}
             <div className="space-y-6">
+              {/* Auth card */}
               <div className="rounded-3xl border border-slate-200 bg-white px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.12)]">
                 <div className="space-y-3 mb-6">
                   <h2 className="text-2xl font-semibold text-slate-900">
@@ -211,25 +214,65 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* scoring card */}
+              {/* Sample matchup + scoring card */}
               <div className="rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-base font-semibold text-slate-900">
-                    Scoring (And It&apos;s No Good style)
-                  </span>
-                  <span className="text-base text-slate-600">
-                    We do the math.
-                  </span>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold text-slate-900">
+                      Sample matchup
+                    </p>
+                    <p className="text-base text-slate-700">
+                      Week 3 · And It&apos;s No Good league
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-lime-50 px-4 py-2 text-base font-semibold text-lime-800 border border-lime-200">
+                    Live · Q4 1:12
+                  </div>
                 </div>
-                <ul className="text-base text-slate-800 space-y-1.5">
+
+                {/* Scoreboard */}
+                <div className="rounded-2xl border border-slate-200 bg-lime-50 px-4 py-4 mb-4">
+                  <div className="grid grid-cols-2 gap-6 items-end">
+                    <div className="space-y-2">
+                      <p className="text-base font-semibold text-slate-900">
+                        Sole Crushers
+                      </p>
+                      <p className="text-base text-slate-800">
+                        Justin Tucker · 3 FG (34, 49, 56)
+                      </p>
+                      <p className="text-3xl font-bold text-slate-900">17</p>
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <p className="text-base font-semibold text-slate-900">
+                        The PATty Doinks
+                      </p>
+                      <p className="text-base text-slate-800">
+                        Tyler Bass · 2 FG (27, 31), 3 XP
+                      </p>
+                      <p className="text-3xl font-bold text-slate-900">12</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scoring explanation */}
+                <div className="space-y-2 mb-2">
+                  <p className="text-base font-semibold text-slate-900">
+                    How those points happen
+                  </p>
+                  <p className="text-base text-slate-800 leading-relaxed">
+                    Built on the And It&apos;s No Good house rules where misses
+                    and pressure kicks swing everything:
+                  </p>
+                </div>
+                <ul className="text-base text-slate-800 space-y-1.5 mb-3">
                   <li>+2 pts — Missed FG under 29 yards</li>
                   <li>+1 pt — Missed FG from 30+ yards</li>
                   <li>+3 pts — Missed or blocked extra point</li>
                   <li>-1 pt — Made FG over 50 yards</li>
                 </ul>
-                <p className="mt-3 text-base text-slate-600">
-                  Based on the original AING league. Use this house system or
-                  tweak your own rules later.
+                <p className="text-base text-slate-700">
+                  We pull real NFL stats, apply your league&apos;s scoring, and
+                  keep matchups and standings updated for you.
                 </p>
               </div>
             </div>

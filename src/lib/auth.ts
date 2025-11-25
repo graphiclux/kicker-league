@@ -1,143 +1,135 @@
-// src/lib/auth.ts
 import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { prisma } from "@/lib/db";
 import { Resend } from "resend";
-
-import { prisma } from "@/lib/prisma";
+import { getSafeCallbackUrl } from "@/lib/redirect";
 import { buildMagicLinkEmail } from "@/emails/magic-link";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const emailFrom = process.env.AUTH_EMAIL_FROM || "auth@kickerleague.app";
+
+// Dev login toggle
+const enableDevLogin =
+  process.env.NODE_ENV !== "production" ||
+  process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === "true";
 
 export const authOptions: NextAuthOptions = {
-  // Use Prisma adapter so EmailProvider can store verification tokens
   adapter: PrismaAdapter(prisma),
 
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  providers: [
+    // -------- Email Provider (Magic Link) -------- //
+    EmailProvider({
+      from: emailFrom,
+
+      async sendVerificationRequest({ identifier, url }) {
+        const { subject, html, text } = buildMagicLinkEmail({ url });
+
+        await resend.emails.send({
+          from: emailFrom,
+          to: identifier,
+          subject,
+          html,
+          text,
+        });
+      },
+    }),
+
+    // -------- Dev-only Credentials Provider -------- //
+    ...(enableDevLogin
+      ? [
+          CredentialsProvider({
+            id: "email-login",
+            name: "Dev Email Login",
+            credentials: {
+              email: {
+                label: "Email",
+                type: "email",
+                placeholder: "dev@example.com",
+              },
+            },
+            async authorize(credentials) {
+              const email = credentials?.email?.toLowerCase().trim();
+              if (!email) return null;
+
+              // Create if not exists
+              let user = await prisma.user.findUnique({
+                where: { email },
+              });
+
+              if (!user) {
+                user = await prisma.user.create({
+                  data: { email },
+                });
+              }
+
+              return user;
+            },
+          }),
+        ]
+      : []),
+  ],
+
+  // -------- Custom Pages -------- //
+  pages: {
+    verifyRequest: "/auth/check-email",
+  },
 
   session: {
     strategy: "jwt",
   },
 
-  providers: [
-    // 1) Real magic-link email provider (Resend)
-    EmailProvider({
-      id: "email",
-      name: "Email",
-      from: process.env.EMAIL_FROM,
-      maxAge: 24 * 60 * 60, // 24 hours
-
-      async sendVerificationRequest({ identifier, url, provider }) {
-        if (!process.env.RESEND_API_KEY) {
-          console.error(
-            "[NextAuth] RESEND_API_KEY is not set – cannot send magic link email."
-          );
-          throw new Error("Email service not configured.");
-        }
-
-        // Optional logo based on NEXTAUTH_URL
-        const baseUrl = process.env.NEXTAUTH_URL ?? "";
-        const logoUrl =
-          baseUrl && baseUrl.startsWith("http")
-            ? `${baseUrl.replace(/\/+$/, "")}/aing-logo.png`
-            : undefined;
-
-        const { subject, html, text } = buildMagicLinkEmail({
-          url,
-          email: identifier,
-          logoUrl,
-        });
-
-        const from =
-          provider.from ??
-          process.env.EMAIL_FROM ??
-          "Kicker League <no-reply@example.com>";
-
-        try {
-          const response = await resend.emails.send({
-            from,
-            to: identifier,
-            subject,
-            html,
-            text,
-          });
-
-          if ("error" in response && response.error) {
-            console.error(
-              "[NextAuth] Resend error sending magic link:",
-              response.error
-            );
-            throw new Error("Error sending magic link email.");
-          }
-        } catch (err) {
-          console.error(
-            "[NextAuth] Failed to send magic link email via Resend:",
-            err
-          );
-          throw new Error("Error sending magic link email.");
-        }
-      },
-    }),
-
-    // 2) Dev-only "email-login" credentials provider (no email sent)
-    CredentialsProvider({
-      id: "email-login",
-      name: "Dev Email Login",
-      credentials: {
-        email: {
-          label: "Email",
-          type: "email",
-          placeholder: "coach@example.com",
-        },
-      },
-      async authorize(credentials) {
-        const raw = credentials?.email ?? "";
-        const email = raw.trim().toLowerCase();
-
-        if (!email) return null;
-
-        // Simple sanity check
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-          return null;
-        }
-
-        // Use email as the stable user id
-        return {
-          id: email,
-          email,
-          name: email.split("@")[0] || "Coach",
-        };
-      },
-    }),
-  ],
-
-  // If you want to keep /login as the custom sign-in page
-  pages: {
-    signIn: "/login",
-  },
-
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.email = user.email;
-        token.name = user.name;
+    // ----- Secure Redirect Handling ----- //
+    async redirect({ url, baseUrl }) {
+      try {
+        // Internal relative URLs
+        if (url.startsWith("/")) {
+          const safe = getSafeCallbackUrl(url, "/dashboard");
+          return `${baseUrl}${safe}`;
+        }
+
+        // Absolute same-origin URLs
+        const parsed = new URL(url);
+        const root = new URL(baseUrl);
+
+        if (parsed.origin === root.origin) {
+          const safe = getSafeCallbackUrl(
+            parsed.pathname + parsed.search,
+            "/dashboard"
+          );
+          return `${root.origin}${safe}`;
+        }
+
+        // Reject external URLs
+        return `${baseUrl}/dashboard`;
+      } catch {
+        return `${baseUrl}/dashboard`;
       }
-      return token;
     },
 
+    // ----- Expose user.id in the session ----- //
     async session({ session, token }) {
-      if (session.user) {
-        session.user.email = (token.email as string) ?? undefined;
-        session.user.name = (token.name as string) ?? undefined;
-        (session.user as any).id = token.sub; // expose "id" (email) to server
+      if (token && session.user) {
+        (session.user as any).id = token.sub;
       }
       return session;
     },
   },
 
-  // Helpful while we’re wiring everything up
-  debug: process.env.NODE_ENV !== "production",
+  // -------- Server-side Auth Logging -------- //
+  logger: {
+    error(code, metadata) {
+      console.error("NextAuth Error:", code, metadata);
+    },
+    warn(code) {
+      console.warn("NextAuth Warning:", code);
+    },
+    debug(code, metadata) {
+      if (enableDevLogin) {
+        console.log("NextAuth Debug:", code, metadata);
+      }
+    },
+  },
 };
-
-export default authOptions;

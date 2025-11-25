@@ -25,26 +25,56 @@ type LeaderboardResponse = {
   error?: string;
 };
 
-export const dynamic = "force-dynamic";
-
-// Optional: very lightweight kicker name mapping.
-// You can extend this over time.
-const KICKER_NAMES: Record<string, string> = {
-  BUF: "Tyler Bass",
-  KC: "Harrison Butker",
-  // Add more as desired, e.g.:
-  // DAL: "Brandon Aubrey",
-  // ...etc
+type KickerInfo = {
+  playerId: string;
+  name: string;
+  team: string;
+  injuryStatus: string | null;
+  injuryNotes: string | null;
 };
 
+type KickersResponse = {
+  ok: boolean;
+  source?: string;
+  updatedAt?: string;
+  kickers?: Record<string, KickerInfo>;
+  error?: string;
+};
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Map injury_status -> label + severity
+ */
+function interpretInjuryStatus(status: string | null | undefined) {
+  if (!status) return { label: "Healthy", level: "ok" as const };
+
+  const normalized = status.toUpperCase();
+
+  if (["OUT", "O", "IR", "PUP", "SUS"].includes(normalized)) {
+    return { label: normalized, level: "bad" as const };
+  }
+
+  if (["Q", "QUESTIONABLE", "D", "DOUBTFUL"].includes(normalized)) {
+    return { label: normalized, level: "warn" as const };
+  }
+
+  return { label: normalized, level: "warn" as const };
+}
+
+/**
+ * Team logo & kicker photo helpers
+ * (swap these to a remote images API later if you want)
+ */
 function getTeamLogoSrc(abbr: string) {
   // Convention: drop logos in /public/logos/teams/buf.svg (or .png)
   return `/logos/teams/${abbr.toLowerCase()}.svg`;
 }
 
-function getKickerPhotoSrc(abbr: string) {
-  // Convention: drop kicker headshots in /public/kickers/buf.jpg (or .png)
-  return `/kickers/${abbr.toLowerCase()}.jpg`;
+function getKickerPhotoSrc(teamAbbr: string) {
+  // For now still uses local assets; later you can map playerId to
+  // a remote images API (FantasyNerds, SportsData, etc.).
+  return `/kickers/${teamAbbr.toLowerCase()}.jpg`;
 }
 
 export default function LeaguePageWrapper({
@@ -80,6 +110,9 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
   const [loading, setLoading] = useState(false);
   const [appliedDefaultWeek, setAppliedDefaultWeek] = useState(false);
 
+  const [kickers, setKickers] = useState<Record<string, KickerInfo>>({});
+  const [kickersLoaded, setKickersLoaded] = useState(false);
+
   const url = useMemo(() => {
     const q = new URLSearchParams();
     q.set("season", String(season));
@@ -89,7 +122,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
     return `/leagues/${leagueId}/leaderboard?` + q.toString();
   }, [leagueId, season, week]);
 
-  async function load() {
+  async function loadLeaderboard() {
     setLoading(true);
     try {
       const res = await fetch(url, { cache: "no-store" });
@@ -102,10 +135,31 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
     }
   }
 
+  async function loadKickers() {
+    try {
+      const res = await fetch("/api/nfl/kickers", {
+        cache: "no-store",
+      });
+      const json = (await res.json()) as KickersResponse;
+      if (json.ok && json.kickers) {
+        setKickers(json.kickers);
+      }
+    } catch (e) {
+      // Silent fail; we’ll just fall back to generic kicker names
+      console.error("Failed to load kickers", e);
+    } finally {
+      setKickersLoaded(true);
+    }
+  }
+
   useEffect(() => {
-    load();
+    loadLeaderboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
+
+  useEffect(() => {
+    loadKickers();
+  }, []);
 
   // If no week was specified in the URL, adopt the API's chosen week (latestWeek),
   // but only do this once to avoid infinite loops.
@@ -161,7 +215,6 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
               onChange={(e) => {
                 const val = Number(e.target.value);
                 setSeason(val);
-                // reset week so API can choose appropriate latest week when season changes
                 setWeek(undefined);
                 setAppliedDefaultWeek(false);
               }}
@@ -193,7 +246,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
           </label>
 
           <button
-            onClick={load}
+            onClick={loadLeaderboard}
             className="inline-flex items-center rounded-full bg-slate-900 px-4 py-1.5 text-xs sm:text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
             disabled={loading}
           >
@@ -222,7 +275,13 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
 
           {showRows &&
             rows.map((r, i) => {
-              const kickerName = KICKER_NAMES[r.nflTeam] ?? "Kicker";
+              const kicker = kickers[r.nflTeam];
+              const kickerName =
+                kicker?.name ?? `${r.nflTeam} kicker`;
+              const injury = interpretInjuryStatus(
+                kicker?.injuryStatus
+              );
+
               const logoSrc = getTeamLogoSrc(r.nflTeam);
               const kickerPhotoSrc = getKickerPhotoSrc(r.nflTeam);
 
@@ -240,7 +299,6 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="relative h-10 w-10 rounded-full bg-slate-100 overflow-hidden">
-                            {/* Team logo (optional asset) */}
                             <Image
                               src={logoSrc}
                               alt={`${r.nflTeam} logo`}
@@ -248,9 +306,9 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                               className="object-contain"
                               sizes="40px"
                               onError={(e) => {
-                                // If logo missing, just show blank background; Next/Image still renders box.
-                                // @ts-expect-error - allow onError
-                                e.currentTarget.style.visibility = "hidden";
+                                // @ts-expect-error
+                                e.currentTarget.style.visibility =
+                                  "hidden";
                               }}
                             />
                           </div>
@@ -259,8 +317,8 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                               {r.nflTeam} — {r.nflTeamName}
                             </div>
                             <div className="text-xs text-slate-500">
-                              Owner: {r.owner.name ?? r.owner.email} • Draft #
-                              {r.draftSlot}
+                              Owner: {r.owner.name ?? r.owner.email} •
+                              Draft #{r.draftSlot}
                             </div>
                           </div>
                         </div>
@@ -287,19 +345,43 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                             className="object-cover"
                             sizes="40px"
                             onError={(e) => {
-                              // Hide if we don't have a real photo yet
-                              // @ts-expect-error - allow onError
-                              e.currentTarget.style.visibility = "hidden";
+                              // @ts-expect-error
+                              e.currentTarget.style.visibility =
+                                "hidden";
                             }}
                           />
                         </div>
-                        <div>
+                        <div className="space-y-0.5">
                           <div className="text-xs font-semibold text-slate-800">
                             {kickerName}
                           </div>
-                          <div className="text-[11px] text-slate-500">
-                            This week&apos;s kicker for {r.nflTeam}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-slate-500">
+                              This week&apos;s kicker for {r.nflTeam}
+                            </span>
+                            {kickersLoaded && (
+                              <span
+                                className={[
+                                  "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                                  injury.level === "ok" &&
+                                    "bg-emerald-50 text-emerald-700 border border-emerald-100",
+                                  injury.level === "warn" &&
+                                    "bg-amber-50 text-amber-700 border border-amber-100",
+                                  injury.level === "bad" &&
+                                    "bg-red-50 text-red-700 border border-red-100",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              >
+                                {injury.label}
+                              </span>
+                            )}
                           </div>
+                          {kicker?.injuryNotes && (
+                            <div className="text-[10px] text-slate-500">
+                              {kicker.injuryNotes}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -343,8 +425,8 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                 This week&apos;s kicks
               </h2>
               <p className="text-[11px] text-slate-500">
-                All scoring plays for Week {effectiveWeek ?? "—"} across the
-                league.
+                All scoring plays for Week {effectiveWeek ?? "—"} across
+                the league.
               </p>
             </div>
             {weeklyKicks.length > 0 && (

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,19 +14,20 @@ const geistMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "And It's No Good",
-  description: "A tiny fantasy game where only the kickers matter.",
+  title: "Kicker League | And It's No Good",
+  description:
+    "Kicker-only fantasy football inspired by the long-running And It's No Good league. Draft kickers, reward chaos, and let us handle the scoring.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: ReactNode;
+}) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-slate-50`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-100 text-slate-900`}
       >
         {children}
       </body>

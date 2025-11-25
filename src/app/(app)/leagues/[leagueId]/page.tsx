@@ -56,15 +56,24 @@ function interpretInjuryStatus(status: string | null | undefined) {
 }
 
 /**
- * Sleeper CDN helpers
+ * Local team logo helper.
+ * If you drop files into /public/logos/teams/buf.svg, kc.svg, etc.,
+ * this will use them. If not, we still show a fallback text avatar.
  */
 function getTeamLogoSrc(teamAbbr: string) {
-  return `https://sleepercdn.com/images/team_logos/nfl/${teamAbbr.toLowerCase()}.png`;
+  return `/logos/teams/${teamAbbr.toLowerCase()}.svg`;
 }
 
-function getKickerPhotoSrc(kicker: KickerInfo | undefined) {
-  if (!kicker || !kicker.playerId) return null;
-  return `https://sleepercdn.com/content/nfl/players/${kicker.playerId}.jpg`;
+/**
+ * Simple kicker initials for avatar.
+ */
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0]?.toUpperCase())
+    .join("");
 }
 
 export default function LeaguePageWrapper({
@@ -269,7 +278,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
               );
 
               const logoSrc = getTeamLogoSrc(r.nflTeam);
-              const kickerPhotoSrc = getKickerPhotoSrc(kicker);
+              const kickerInitials = getInitials(kickerName);
 
               return (
                 <div
@@ -284,17 +293,21 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                           {i + 1}
                         </div>
                         <div className="flex items-center gap-3">
-                          <div className="relative h-10 w-10 rounded-full bg-slate-100 overflow-hidden">
+                          {/* Logo circle with optional image + fallback text */}
+                          <div className="relative h-10 w-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center text-[11px] font-semibold text-slate-700">
+                            {/* If you add /public/logos/teams/{abbr}.svg, this will show it.
+                                If not, the team code text remains visible. */}
+                            <span className="z-0">{r.nflTeam}</span>
                             <Image
                               src={logoSrc}
                               alt={`${r.nflTeam} logo`}
                               fill
-                              className="object-contain"
+                              className="object-contain z-10"
                               sizes="40px"
+                              // Don't hide on error; just let the text underneath be visible.
                               onError={(e) => {
                                 // @ts-expect-error
-                                e.currentTarget.style.visibility =
-                                  "hidden";
+                                e.currentTarget.style.display = "none";
                               }}
                             />
                           </div>
@@ -323,21 +336,8 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                     <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)]">
                       {/* Kicker info */}
                       <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
-                        <div className="relative h-10 w-10 rounded-full bg-slate-200 overflow-hidden">
-                          {kickerPhotoSrc && (
-                            <Image
-                              src={kickerPhotoSrc}
-                              alt={kickerName}
-                              fill
-                              className="object-cover"
-                              sizes="40px"
-                              onError={(e) => {
-                                // @ts-expect-error
-                                e.currentTarget.style.visibility =
-                                  "hidden";
-                              }}
-                            />
-                          )}
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-800">
+                          {kickerInitials || r.nflTeam}
                         </div>
                         <div className="space-y-0.5">
                           <div className="text-xs font-semibold text-slate-800">

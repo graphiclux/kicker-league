@@ -61,7 +61,7 @@ function interpretInjuryStatus(status: string | null | undefined) {
  * this will use them. If not, we still show a fallback text avatar.
  */
 function getTeamLogoSrc(teamAbbr: string) {
-  return `/logos/teams/${teamAbbr.toLowerCase()}.svg`;
+  return `https://sleepercdn.com/images/team_logos/nfl/${teamAbbr.toLowerCase()}.png`;
 }
 
 /**

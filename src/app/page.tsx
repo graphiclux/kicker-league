@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 
 type AuthStatus = "idle" | "sending" | "error";
@@ -48,66 +49,70 @@ export default function Home() {
   const authDisabled = authStatus === "sending";
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-900">
-      {/* Top bar / brand strip */}
+    <main className="min-h-screen bg-gradient-to-b from-slate-100 to-slate-200/70 text-slate-900">
+      {/* Top bar with logo */}
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-lime-500/10 shadow-sm ring-1 ring-lime-400/60">
-              <div className="relative h-6 w-6">
-                <span className="absolute inset-0 rounded-full border-2 border-lime-500" />
-                <span className="absolute left-1/2 top-1/2 h-4 w-[2px] -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-full bg-lime-500" />
-              </div>
+            <div className="relative h-10 w-10 sm:h-12 sm:w-12">
+              <Image
+                src="/aing-logo.png"
+                alt="And It's No Good logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-            <div>
+            <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-700">
+                <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-800">
                   Kicker League
                 </span>
-                <span className="rounded-full bg-lime-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-lime-700">
+                <span className="rounded-full bg-lime-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-700">
                   Beta
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Built from the chaos of the And It&apos;s No Good home league.
+              <p className="text-[11px] sm:text-xs text-slate-500">
+                Built from the chaos of the{" "}
+                <span className="font-semibold">And It&apos;s No Good</span>{" "}
+                home league.
               </p>
             </div>
           </div>
 
           <Link
             href="/login"
-            className="hidden sm:inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm hover:border-lime-400 hover:text-lime-700 transition-colors"
+            className="hidden sm:inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-800 shadow-sm hover:border-lime-400 hover:text-lime-700 transition-colors"
           >
             Sign in
           </Link>
         </div>
       </header>
 
-      {/* Hero */}
+      {/* Hero area */}
       <div className="relative">
-        {/* big soft background gradient */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-gradient-to-b from-lime-100 via-emerald-50 to-transparent" />
+        {/* big soft gradient band */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-lime-100 via-emerald-50 to-transparent" />
 
-        <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 pb-16 pt-12 sm:px-6 lg:px-8">
-          <section className="grid gap-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] items-start">
-            {/* Left: main pitch */}
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-lime-800 border border-lime-300 shadow-sm">
-                <span className="text-sm">🥾</span>
+        <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-14 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+          {/* Hero grid */}
+          <section className="grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">
+            {/* Left: big copy */}
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-lime-800 border border-lime-300 shadow-sm">
+                <span className="text-base">🥾</span>
                 <span>Because kickers deserve their own league</span>
               </div>
 
               <div className="space-y-4">
-                <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-tight">
                   Fantasy football
-                  <span className="block text-lime-700">
-                    where only the kickers score.
-                  </span>
+                  <span className="block text-lime-700">where only kickers score.</span>
                 </h1>
-                <p className="text-base text-slate-600 max-w-xl">
-                  Kicker League is a tiny fantasy game you run alongside your
-                  main league. Draft kickers, reward misses, punish long makes,
-                  and let us handle the scoring and standings.
+                <p className="text-base sm:text-lg text-slate-600 max-w-xl leading-relaxed">
+                  Kicker League is a tiny fantasy game you run alongside your main
+                  league. Draft kickers, reward misses, punish long makes, and let
+                  us handle the scoring and standings.
                 </p>
               </div>
 
@@ -117,8 +122,8 @@ export default function Home() {
                     Kickers only, no rosters
                   </p>
                   <p className="text-[13px] leading-relaxed">
-                    Everyone drafts 1–2 NFL kickers. No 15-player lineups or
-                    waiver drama. Just legs and nerves.
+                    Everyone drafts 1–2 NFL kickers. No 15-player lineups or waiver
+                    drama. Just legs and nerves.
                   </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
@@ -127,23 +132,23 @@ export default function Home() {
                   </p>
                   <p className="text-[13px] leading-relaxed">
                     Short misses and XP disasters earn points. Long makes can
-                    hurt. Pain becomes the meta.
+                    actually hurt. Pain becomes the meta.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Right: primary CTA card (auth + quick scoring preview) */}
-            <div className="space-y-4">
-              <div className="rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
-                <div className="space-y-1 mb-4">
-                  <h2 className="text-sm font-semibold text-slate-900">
-                    Get into your league hub
+            {/* Right: auth card */}
+            <div className="space-y-5">
+              <div className="rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-[0_18px_45px_rgba(15,23,42,0.16)]">
+                <div className="space-y-2 mb-5">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">
+                    Jump into your league hub
                   </h2>
-                  <p className="text-xs text-slate-600">
-                    Use your email to sign up or log in. We&apos;ll send you to
-                    your dashboard, where you can create leagues and invite
-                    friends.
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    Use your email to sign up or log in. We&apos;ll send you to your
+                    dashboard where you can create leagues, invite friends, and track
+                    kicks.
                   </p>
                 </div>
 
@@ -169,7 +174,7 @@ export default function Home() {
                   <button
                     type="submit"
                     disabled={authDisabled}
-                    className="w-full rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    className="w-full rounded-lg bg-slate-900 py-2.5 text-sm sm:text-base font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                   >
                     {authStatus === "sending"
                       ? "Sending magic link..."
@@ -183,8 +188,8 @@ export default function Home() {
                   )}
 
                   <p className="text-[11px] text-slate-500">
-                    In dev, this may sign you in immediately. In production,
-                    you&apos;ll get a magic link.
+                    In dev, this might sign you in immediately. In production,
+                    you&apos;ll get a one-tap magic link.
                   </p>
                 </form>
 
@@ -193,7 +198,7 @@ export default function Home() {
                     Open an existing league
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Paste the ID from your league URL — the part after{" "}
+                    Paste the ID from your league URL &mdash; the part after{" "}
                     <code className="rounded bg-slate-100 px-1 py-0.5 text-[10px]">
                       /leagues/
                     </code>
@@ -220,48 +225,48 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* scoring chip card */}
+              {/* scoring card */}
               <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-slate-900">
-                    Scoring (AING-style house rules)
+                    Scoring (And It&apos;s No Good style)
                   </span>
                   <span className="text-[10px] text-slate-500">
                     We do the math.
                   </span>
                 </div>
-                <ul className="text-[11px] text-slate-700 space-y-1.5">
+                <ul className="text-[12px] text-slate-700 space-y-1.5">
                   <li>+2 pts — Missed FG under 29 yards</li>
                   <li>+1 pt — Missed FG from 30+ yards</li>
                   <li>+3 pts — Missed or blocked extra point</li>
                   <li>-1 pt — Made FG over 50 yards</li>
                 </ul>
-                <p className="mt-2 text-[10px] text-slate-500">
-                  Based on the original And It&apos;s No Good league. Use as-is
-                  or tweak your own house settings later.
+                <p className="mt-2 text-[11px] text-slate-500">
+                  Based on the original AING league. Use this house system or
+                  tweak your own rules later.
                 </p>
               </div>
             </div>
           </section>
 
-          {/* Secondary section: how it fits + why it’s fun */}
-          <section className="grid gap-8 lg:grid-cols-2 border-t border-slate-200 pt-8">
+          {/* Secondary section */}
+          <section className="grid gap-10 lg:grid-cols-2 border-t border-slate-200 pt-8">
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-base font-semibold text-slate-900">
                 How Kicker League fits into your season
               </h2>
-              <ol className="space-y-3 text-sm text-slate-700">
+              <ol className="space-y-3 text-sm sm:text-base text-slate-700">
                 <li className="flex gap-3">
-                  <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
+                  <span className="mt-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[12px] font-semibold text-white">
                     1
                   </span>
                   <span>
                     <span className="font-semibold">Create a league</span> and
-                    invite your main fantasy group, coworkers, or group chat.
+                    invite your fantasy crew, coworkers, or group chat.
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
+                  <span className="mt-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[12px] font-semibold text-white">
                     2
                   </span>
                   <span>
@@ -270,7 +275,7 @@ export default function Home() {
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
+                  <span className="mt-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[12px] font-semibold text-white">
                     3
                   </span>
                   <span>
@@ -284,19 +289,19 @@ export default function Home() {
             </div>
 
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-base font-semibold text-slate-900">
                 Why a kicker-only league works
               </h2>
-              <p className="text-sm text-slate-700">
+              <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
                 Every extra point becomes stressful. Every 55-yarder is a
-                double-edged sword. The game takes almost no time to manage, but
+                double-edged sword. The game takes almost no time to manage but
                 gives your group chat something to yell about every Sunday.
               </p>
-              <ul className="space-y-1.5 text-sm text-slate-700">
+              <ul className="space-y-1.5 text-sm sm:text-base text-slate-700">
                 <li>• Elevates the weirdest part of real football.</li>
                 <li>• Easy to explain, impossible to stop thinking about.</li>
                 <li>
-                  • Doesn&apos;t compete with your main fantasy league — it
+                  • Doesn&apos;t compete with your main fantasy league &mdash; it
                   rides alongside it as a side pot or chaos game.
                 </li>
               </ul>
@@ -310,13 +315,13 @@ export default function Home() {
           )}
 
           <footer className="border-t border-slate-200 pt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] sm:text-xs text-slate-500">
               And It&apos;s No Good is the original private kicker-only league.
               Kicker League is the app that lets anyone run their own version.
             </p>
             <Link
               href="https://anditsnogood.com"
-              className="text-[11px] text-lime-700 hover:text-lime-800 underline underline-offset-4"
+              className="text-[11px] sm:text-xs text-lime-700 hover:text-lime-800 underline underline-offset-4"
             >
               Visit the AING league site →
             </Link>

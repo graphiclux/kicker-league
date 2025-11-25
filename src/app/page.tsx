@@ -15,26 +15,48 @@ export default function Home() {
   const [leagueIdInput, setLeagueIdInput] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
-  async function handleAuth(e: FormEvent) {
-    e.preventDefault();
-    if (!email.trim() || authStatus === "sending") return;
+async function handleAuth(e: FormEvent) {
+  e.preventDefault();
+  if (!email.trim() || authStatus === "sending") return;
 
-    setAuthStatus("sending");
-    setAuthError(null);
-    setMsg(null);
+  setAuthStatus("sending");
+  setAuthError(null);
+  setMsg(null);
 
-    try {
-      await signIn("email", {
-        email: email.trim(),
-        callbackUrl: "/dashboard",
-        redirect: true,
-      });
-    } catch (err) {
-      console.error("[Landing] signIn error", err);
+  try {
+    const res = await signIn("email", {
+      email: email.trim(),
+      callbackUrl: "/dashboard",
+      redirect: false, // <— IMPORTANT: don't auto-redirect
+    });
+
+    console.log("[Landing] signIn(email) result:", res);
+
+    if (!res) {
       setAuthStatus("error");
-      setAuthError("We couldn’t start your sign-in. Please try again.");
+      setAuthError("No response from sign-in. Please try again.");
+      return;
     }
+
+    if (res.error) {
+      // Common values are: "Configuration", "AccessDenied", "Verification"
+      setAuthStatus("error");
+      setAuthError(
+        "We couldn’t start your sign-in. Please double-check your email and try again."
+      );
+      return;
+    }
+
+    // If we reach here, NextAuth accepted the request and should have sent the email
+    setAuthStatus("idle");
+    setMsg("Check your email for a magic sign-in link.");
+  } catch (err) {
+    console.error("[Landing] signIn error", err);
+    setAuthStatus("error");
+    setAuthError("We couldn’t start your sign-in. Please try again.");
   }
+}
+
 
   function openLeague(e: FormEvent) {
     e.preventDefault();

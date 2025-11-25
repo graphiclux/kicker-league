@@ -1,213 +1,133 @@
 // src/app/(app)/dashboard/page.tsx
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { requireUserId } from "@/lib/session-user";
-import { NewLeagueButton } from "./NewLeagueButton";
+import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const { userId } = await requireUserId();
+  const user = await getCurrentUser();
 
-  let leagues:
-    | Awaited<ReturnType<typeof prisma.league.findMany>>
-    | [] = [];
-  let loadError: string | null = null;
-  let loadErrorDetail: string | null = null;
-
-  try {
-    leagues = await prisma.league.findMany({
-      where: {
-        OR: [
-          { commissionerId: userId },
-          { members: { some: { id: userId } } },
-        ],
-      },
-      include: {
-        commissioner: true,
-        members: true,
-        teams: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-  } catch (err: any) {
-    console.error("[Dashboard] DB Error:", err);
-
-    loadError =
-      "We couldn’t load your leagues from the database. Please try again shortly.";
-
-    if (err && typeof err === "object" && "message" in err) {
-      loadErrorDetail = (err as any).message;
-    } else {
-      loadErrorDetail = String(err);
-    }
-
-    leagues = [];
+  if (!user?.id) {
+    // Not logged in → send back to landing (or /login if you prefer)
+    redirect("/");
   }
 
-  const isEmpty = !loadError && leagues.length === 0;
+  const userId = user.id;
+
+  // Fetch leagues where this user is commissioner, member, or owner of a team
+  const leagues = await prisma.league.findMany({
+    where: {
+      OR: [
+        { commissionerId: userId },
+        { members: { some: { id: userId } } },          // 👈 FIXED HERE
+        { teams: { some: { ownerId: userId } } },
+      ],
+    },
+    include: {
+      _count: {
+        select: {
+          teams: true,
+          members: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
   return (
     <div className="flex w-full flex-col gap-6">
-      {/* Hero Section */}
-      <section className="rounded-2xl bg-white shadow-[0_8px_40px_rgba(0,0,0,0.06)] border border-slate-200 px-6 py-6 sm:px-8 sm:py-7">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left */}
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full bg-lime-200/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-lime-800 border border-lime-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-lime-700" />
-              <span>Season Hub</span>
-            </div>
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">
+            Dashboard
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500">
+            Manage your kicker leagues, teams, and scoring.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/leagues/new"
+            className="inline-flex items-center rounded-full bg-lime-500 px-4 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 hover:bg-lime-400 transition-colors"
+          >
+            Create a new league
+          </Link>
+        </div>
+      </div>
 
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Your Leagues
-              </h1>
-              <p className="mt-2 max-w-xl text-sm text-slate-500">
-                Manage all your kicker-only leagues from one clean dashboard.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3 text-xs text-slate-600">
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 border border-slate-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-lime-600" />
-                Active leagues:{" "}
-                <span className="font-semibold text-slate-900">
-                  {leagues.length}
-                </span>
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 border border-slate-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-sky-600" />
-                Current season:{" "}
-                <span className="font-semibold">
-                  {new Date().getFullYear()}
-                </span>
-              </span>
-            </div>
+      {/* Leagues list */}
+      <div className="space-y-3">
+        {leagues.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+            You&apos;re not in any leagues yet.
+            <br />
+            <Link
+              href="/leagues/new"
+              className="mt-2 inline-flex text-xs font-semibold text-lime-600 hover:text-lime-500"
+            >
+              Create your first league
+            </Link>
           </div>
-
-          {/* Right CTA */}
-          <div className="flex flex-col items-stretch gap-3 sm:w-64">
-            <div className="text-xs text-slate-500">Start a new league</div>
-
-            <div className="inline-flex items-center justify-between rounded-2xl bg-lime-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-lime-300/40">
-              <div className="flex flex-col">
-                <span>Create New League</span>
-                <span className="text-[11px] font-normal text-white/80">
-                  You&apos;ll be the commissioner
-                </span>
-              </div>
-              <span className="ml-4 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg">
-                +
-              </span>
-            </div>
-
-            <div className="self-start">
-              <NewLeagueButton />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Error Display */}
-      {loadError && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900 shadow-sm">
-          <div>{loadError}</div>
-          {loadErrorDetail && (
-            <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-amber-100/80 p-2 text-[10px] text-amber-900/90">
-              {loadErrorDetail}
-            </pre>
-          )}
-        </div>
-      )}
-
-      {/* Your Leagues Section */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Your Leagues
-          </h2>
-          <span className="text-xs text-slate-400">Sorted by newest</span>
-        </div>
-
-        {!isEmpty && leagues.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {leagues.map((league) => {
               const isCommissioner = league.commissionerId === userId;
-              const teamCount = league.teams.length;
-              const memberCount = league.members.length;
+              const teamCount = league._count.teams;
+              const memberCount = league._count.members;
 
               return (
                 <Link
                   key={league.id}
-                  href={`/leagues/${league.id}`}
-                  className="group block rounded-2xl bg-white border border-slate-200 shadow-[0_6px_25px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] transition-all p-5"
+                  href={`/leagues/${league.id}?season=${league.seasonYear}&week=1`}
+                  className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:px-5 sm:py-5 shadow-sm hover:border-lime-400 hover:shadow-md transition-all"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <h3 className="text-base font-semibold text-slate-900 group-hover:text-lime-700 transition">
-                        {league.name}
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        Season{" "}
-                        <span className="font-medium text-slate-700">
-                          {league.seasonYear}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h2 className="text-sm sm:text-base font-semibold text-slate-900 group-hover:text-slate-950">
+                          {league.name}
+                        </h2>
+                        <p className="text-[11px] text-slate-500">
+                          Season {league.seasonYear} • Max {league.maxTeams}{" "}
+                          teams
+                        </p>
+                      </div>
+                      {isCommissioner && (
+                        <span className="inline-flex items-center rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+                          Commissioner
                         </span>
-                      </p>
+                      )}
                     </div>
 
-                    {isCommissioner && (
-                      <span className="inline-flex items-center rounded-full bg-lime-200/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-800 border border-lime-300">
-                        Commish
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                    <div className="flex items-center gap-4">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-lime-600" />
-                        {teamCount} team{teamCount === 1 ? "" : "s"}
-                      </span>
-
-                      <span className="inline-flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-sky-600" />
-                        {memberCount} member{memberCount === 1 ? "" : "s"}
-                      </span>
+                    <div className="flex gap-4 text-[11px] text-slate-600">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-slate-900">
+                          {teamCount}
+                        </span>
+                        <span className="text-slate-500">Teams</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-slate-900">
+                          {memberCount}
+                        </span>
+                        <span className="text-slate-500">Members</span>
+                      </div>
                     </div>
 
-                    <span className="text-slate-400 group-hover:text-lime-700 transition">
-                      Open →
-                    </span>
+                    <div className="mt-1 text-[11px] text-slate-400">
+                      Click to view weekly scoring &amp; leaderboard →
+                    </div>
                   </div>
                 </Link>
               );
             })}
           </div>
-        ) : !loadError ? (
-          <EmptyState />
-        ) : null}
-      </section>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="mt-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-100 text-2xl">
-        🦵
-      </div>
-      <h2 className="mt-4 text-lg font-semibold text-slate-900">
-        You&apos;re not in any leagues yet.
-      </h2>
-      <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
-        Create your first kicker-only league and start tracking kicks.
-      </p>
-      <div className="mt-4 flex justify-center">
-        <NewLeagueButton />
+        )}
       </div>
     </div>
   );

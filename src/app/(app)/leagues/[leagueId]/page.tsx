@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import type { KickerInfo } from "@/app/api/nfl/kickers/route";
 
 type Row = {
   leagueTeamId: string;
@@ -23,14 +24,6 @@ type LeaderboardResponse = {
   availableWeeks?: number[];
   rows?: Row[];
   error?: string;
-};
-
-type KickerInfo = {
-  playerId: string;
-  name: string;
-  team: string;
-  injuryStatus: string | null;
-  injuryNotes: string | null;
 };
 
 type KickersResponse = {
@@ -63,18 +56,15 @@ function interpretInjuryStatus(status: string | null | undefined) {
 }
 
 /**
- * Team logo & kicker photo helpers
- * (swap these to a remote images API later if you want)
+ * Sleeper CDN helpers
  */
-function getTeamLogoSrc(abbr: string) {
-  // Convention: drop logos in /public/logos/teams/buf.svg (or .png)
-  return `/logos/teams/${abbr.toLowerCase()}.svg`;
+function getTeamLogoSrc(teamAbbr: string) {
+  return `https://sleepercdn.com/images/team_logos/nfl/${teamAbbr.toLowerCase()}.png`;
 }
 
-function getKickerPhotoSrc(teamAbbr: string) {
-  // For now still uses local assets; later you can map playerId to
-  // a remote images API (FantasyNerds, SportsData, etc.).
-  return `/kickers/${teamAbbr.toLowerCase()}.jpg`;
+function getKickerPhotoSrc(kicker: KickerInfo | undefined) {
+  if (!kicker || !kicker.playerId) return null;
+  return `https://sleepercdn.com/content/nfl/players/${kicker.playerId}.jpg`;
 }
 
 export default function LeaguePageWrapper({
@@ -145,7 +135,6 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
         setKickers(json.kickers);
       }
     } catch (e) {
-      // Silent fail; we’ll just fall back to generic kicker names
       console.error("Failed to load kickers", e);
     } finally {
       setKickersLoaded(true);
@@ -161,8 +150,6 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
     loadKickers();
   }, []);
 
-  // If no week was specified in the URL, adopt the API's chosen week (latestWeek),
-  // but only do this once to avoid infinite loops.
   useEffect(() => {
     if (!appliedDefaultWeek && week == null && data?.week != null) {
       setWeek(data.week);
@@ -177,7 +164,6 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
   const showRows = data?.ok && (data.rows?.length ?? 0) > 0;
   const rows = data?.rows ?? [];
 
-  // Flatten all breakdowns into a single list for "This week's kicks"
   const weeklyKicks =
     showRows && effectiveWeek != null
       ? rows.flatMap((r) =>
@@ -193,7 +179,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      {/* Top controls inline with app layout */}
+      {/* Top controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-lg sm:text-xl font-semibold text-slate-900">
@@ -255,16 +241,16 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
         </div>
       </div>
 
-      {/* Error state */}
+      {/* Error */}
       {!data?.ok && (
         <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
           {data?.error ?? "Failed to load leaderboard"}
         </div>
       )}
 
-      {/* Main content layout: leaderboard + this week's kicks */}
+      {/* Main content: leaderboard + kicks */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)]">
-        {/* Leaderboard card list */}
+        {/* Leaderboard */}
         <div className="space-y-3">
           {data?.ok && (rows.length ?? 0) === 0 && (
             <div className="rounded-xl border border-yellow-100 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
@@ -283,7 +269,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
               );
 
               const logoSrc = getTeamLogoSrc(r.nflTeam);
-              const kickerPhotoSrc = getKickerPhotoSrc(r.nflTeam);
+              const kickerPhotoSrc = getKickerPhotoSrc(kicker);
 
               return (
                 <div
@@ -291,7 +277,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                   className="rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:px-5 sm:py-5 shadow-sm"
                 >
                   <div className="flex flex-col gap-4">
-                    {/* Top row: rank + team + logo + points */}
+                    {/* Rank + team + logo + points */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-lime-100 text-xs font-semibold text-lime-900">
@@ -338,18 +324,20 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                       {/* Kicker info */}
                       <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
                         <div className="relative h-10 w-10 rounded-full bg-slate-200 overflow-hidden">
-                          <Image
-                            src={kickerPhotoSrc}
-                            alt={`${kickerName} headshot`}
-                            fill
-                            className="object-cover"
-                            sizes="40px"
-                            onError={(e) => {
-                              // @ts-expect-error
-                              e.currentTarget.style.visibility =
-                                "hidden";
-                            }}
-                          />
+                          {kickerPhotoSrc && (
+                            <Image
+                              src={kickerPhotoSrc}
+                              alt={kickerName}
+                              fill
+                              className="object-cover"
+                              sizes="40px"
+                              onError={(e) => {
+                                // @ts-expect-error
+                                e.currentTarget.style.visibility =
+                                  "hidden";
+                              }}
+                            />
+                          )}
                         </div>
                         <div className="space-y-0.5">
                           <div className="text-xs font-semibold text-slate-800">
@@ -417,7 +405,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
             })}
         </div>
 
-        {/* This week's kicks (right column) */}
+        {/* This week's kicks */}
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:px-5 sm:py-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>

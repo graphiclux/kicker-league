@@ -16,7 +16,7 @@ type SleeperPlayer = {
   injury_notes?: string | null;
 };
 
-type KickerInfo = {
+export type KickerInfo = {
   playerId: string;
   name: string;
   team: string;
@@ -45,19 +45,14 @@ function pickTeamKicker(players: SleeperPlayer[]): KickerInfo | null {
     const aOrder = a.depth_chart_order ?? 999;
     const bOrder = b.depth_chart_order ?? 999;
 
-    // Depth chart position ("K" first)
     if (aIsK !== bIsK) return aIsK - bIsK;
-    // Active first
     if (aActive !== bActive) return aActive - bActive;
-    // Lower depth chart order first
     if (aOrder !== bOrder) return aOrder - bOrder;
 
-    // Fallback: alphabetical by name
     return (a.full_name || "").localeCompare(b.full_name || "");
   });
 
   const p = sorted[0];
-
   if (!p.team) return null;
 
   return {
@@ -74,7 +69,7 @@ export async function GET() {
     const sleeperRes = await fetch(
       "https://api.sleeper.app/v1/players/nfl",
       {
-        // Cache on the edge for 30 minutes to be polite & fast
+        // Cache on the edge for 30 minutes
         next: { revalidate: 1800 },
       }
     );
@@ -98,7 +93,6 @@ export async function GET() {
     );
 
     const byTeam = new Map<string, SleeperPlayer[]>();
-
     for (const p of kickers) {
       if (!p.team) continue;
       const list = byTeam.get(p.team) ?? [];

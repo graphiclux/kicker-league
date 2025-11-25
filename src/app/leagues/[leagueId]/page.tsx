@@ -8,7 +8,8 @@ interface LeaguePageProps {
 }
 
 export default async function LeaguePage({ params }: LeaguePageProps) {
-  const { userId, session } = await requireUserId();
+  const leaguePath = `/leagues/${params.leagueId}`;
+  const { userId, session } = await requireUserId(leaguePath);
 
   const league = await prisma.league.findUnique({
     where: { id: params.leagueId },

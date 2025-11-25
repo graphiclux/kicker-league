@@ -112,8 +112,9 @@ async function main() {
       `→ Creating/attaching user ${email} with team ${team.abbr} (slot ${draftSlot})`
     );
 
-    // Upsert user; if they already exist for some reason, we only ensure
-    // they're a member of this league and *don't* add another team for them.
+    // Upsert user; on create, also create their team in this league via nested create.
+    // On update, we only ensure they are connected to the league; we DO NOT create
+    // another team for them (so they won't get duplicates).
     await prisma.user.upsert({
       where: { email },
       update: {
@@ -121,7 +122,7 @@ async function main() {
         leagues: {
           connect: { id: leagueId },
         },
-        // DO NOT create a new team here on update; that could give them multiple.
+        // No teams update here; we don't want to accidentally create extras.
       },
       create: {
         email,
@@ -138,26 +139,6 @@ async function main() {
         },
       },
     });
-
-    // If we want to be absolutely certain a team exists for this user+league,
-    // we can do an extra check & create if missing:
-    const existingTeamForUser = await prisma.leagueTeam.findFirst({
-      where: {
-        leagueId,
-        owner: { email },
-      },
-    });
-
-    if (!existingTeamForUser) {
-      await prisma.leagueTeam.create({
-        data: {
-          leagueId,
-          nflTeam: team.abbr,
-          draftSlot,
-          owner: { connect: { email } },
-        },
-      });
-    }
   }
 
   console.log("\n✅ Dummy league users + teams created/updated successfully.");

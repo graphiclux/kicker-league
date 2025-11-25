@@ -2,12 +2,18 @@
 import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { Resend } from "resend";
+
+import { prisma } from "@/lib/prisma";
 import { buildMagicLinkEmail } from "@/emails/magic-link";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const authOptions: NextAuthOptions = {
+  // Use Prisma adapter so EmailProvider can store verification tokens
+  adapter: PrismaAdapter(prisma),
+
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 
   session: {
@@ -30,7 +36,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email service not configured.");
         }
 
-        // We’ll build a logo URL off NEXTAUTH_URL if it’s set
+        // Optional logo based on NEXTAUTH_URL
         const baseUrl = process.env.NEXTAUTH_URL ?? "";
         const logoUrl =
           baseUrl && baseUrl.startsWith("http")
@@ -89,11 +95,9 @@ export const authOptions: NextAuthOptions = {
         const raw = credentials?.email ?? "";
         const email = raw.trim().toLowerCase();
 
-        if (!email) {
-          return null;
-        }
+        if (!email) return null;
 
-        // Simple sanity check; this doesn't have to be perfect.
+        // Simple sanity check
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
           return null;
         }
@@ -107,6 +111,11 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+
+  // If you want to keep /login as the custom sign-in page
+  pages: {
+    signIn: "/login",
+  },
 
   callbacks: {
     async jwt({ token, user }) {
@@ -127,7 +136,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
 
-  // Helpful while we're wiring everything up
+  // Helpful while we’re wiring everything up
   debug: process.env.NODE_ENV !== "production",
 };
 

@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { getSafeCallbackUrl } from "@/lib/redirect";
 
+export const dynamic = "force-dynamic";
+
 type AuthStatus = "idle" | "sending" | "error" | "success";
 
 const ERROR_MESSAGES: Record<string, string> = {

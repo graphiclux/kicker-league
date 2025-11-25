@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { getSafeCallbackUrl } from "@/lib/redirect";
 
+export const dynamic = "force-dynamic";
+
 type Status = "idle" | "sending" | "error";
 
 const isDevEnv =

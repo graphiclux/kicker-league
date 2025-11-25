@@ -15,48 +15,26 @@ export default function Home() {
   const [leagueIdInput, setLeagueIdInput] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
-async function handleAuth(e: FormEvent) {
-  e.preventDefault();
-  if (!email.trim() || authStatus === "sending") return;
+  async function handleAuth(e: FormEvent) {
+    e.preventDefault();
+    if (!email.trim() || authStatus === "sending") return;
 
-  setAuthStatus("sending");
-  setAuthError(null);
-  setMsg(null);
+    setAuthStatus("sending");
+    setAuthError(null);
+    setMsg(null);
 
-  try {
-    const res = await signIn("email", {
-      email: email.trim(),
-      callbackUrl: "/dashboard",
-      redirect: false, // <— IMPORTANT: don't auto-redirect
-    });
-
-    console.log("[Landing] signIn(email) result:", res);
-
-    if (!res) {
+    try {
+      await signIn("email", {
+        email: email.trim(),
+        callbackUrl: "/dashboard",
+        redirect: true,
+      });
+    } catch (err) {
+      console.error("[Landing] signIn error", err);
       setAuthStatus("error");
-      setAuthError("No response from sign-in. Please try again.");
-      return;
+      setAuthError("We couldn’t start your sign-in. Please try again.");
     }
-
-    if (res.error) {
-      // Common values are: "Configuration", "AccessDenied", "Verification"
-      setAuthStatus("error");
-      setAuthError(
-        "We couldn’t start your sign-in. Please double-check your email and try again."
-      );
-      return;
-    }
-
-    // If we reach here, NextAuth accepted the request and should have sent the email
-    setAuthStatus("idle");
-    setMsg("Check your email for a magic sign-in link.");
-  } catch (err) {
-    console.error("[Landing] signIn error", err);
-    setAuthStatus("error");
-    setAuthError("We couldn’t start your sign-in. Please try again.");
   }
-}
-
 
   function openLeague(e: FormEvent) {
     e.preventDefault();
@@ -192,6 +170,12 @@ async function handleAuth(e: FormEvent) {
                       : "Continue with email"}
                   </button>
 
+                  {msg && (
+                    <p className="text-base text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                      {msg}
+                    </p>
+                  )}
+
                   {authError && (
                     <p className="text-base text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                       {authError}
@@ -202,6 +186,7 @@ async function handleAuth(e: FormEvent) {
                     In dev, this might sign you in immediately. In production,
                     you&apos;ll get a one-tap magic link.
                   </p>
+
                 </form>
 
                 <div className="mt-7 pt-5 border-t border-slate-200 space-y-3">

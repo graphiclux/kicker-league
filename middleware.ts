@@ -3,7 +3,8 @@ import { withAuth } from "next-auth/middleware";
 
 export default withAuth({
   pages: {
-    signIn: "/", // Redirect unauthenticated users to landing
+    // When unauthenticated, go to landing with ?callbackUrl=<original>
+    signIn: "/",
   },
 });
 
@@ -11,8 +12,6 @@ export const config = {
   matcher: [
     "/dashboard",
     "/dashboard/:path*",
-    "/leagues",
-    "/leagues/:path*",
     "/settings",
     "/settings/:path*",
     "/account",

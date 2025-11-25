@@ -31,7 +31,10 @@ type KickerInfo = {
 function pickTeamKicker(players: SleeperPlayer[]): KickerInfo | null {
   if (!players.length) return null;
 
-  // Prefer depth_chart_position "K", active players, then lowest depth_chart_order
+  // Prefer:
+  //  - depth_chart_position "K"
+  //  - active players
+  //  - lowest depth_chart_order
   const sorted = [...players].sort((a, b) => {
     const aIsK = a.depth_chart_position === "K" ? 0 : 1;
     const bIsK = b.depth_chart_position === "K" ? 0 : 1;

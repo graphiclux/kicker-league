@@ -51,7 +51,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-lime-50 to-white text-slate-900">
       {/* Top bar with big logo only */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md">
+      <header className="border-b border-slate-200" style={{ backgroundColor: "#faf8f4" }}>
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="relative h-24 w-24 sm:h-28 sm:w-28">
             <Image
@@ -71,6 +71,7 @@ export default function Home() {
           </Link>
         </div>
       </header>
+
 
       {/* Hero area */}
       <div className="relative">

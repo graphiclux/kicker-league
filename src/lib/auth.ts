@@ -1,16 +1,18 @@
+// src/lib/auth.ts
 import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import { getSafeCallbackUrl } from "@/lib/redirect";
 import { buildMagicLinkEmail } from "@/emails/magic-link";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// You can tweak this if you want a different default
 const emailFrom = process.env.AUTH_EMAIL_FROM || "auth@kickerleague.app";
 
-// Dev login toggle
 const enableDevLogin =
   process.env.NODE_ENV !== "production" ||
   process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === "true";
@@ -19,12 +21,15 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
 
   providers: [
-    // -------- Email Provider (Magic Link) -------- //
+    // ----- Email Magic Link Provider ----- //
     EmailProvider({
       from: emailFrom,
-
       async sendVerificationRequest({ identifier, url }) {
-        const { subject, html, text } = buildMagicLinkEmail({ url });
+        // identifier = email
+        const { subject, html, text } = buildMagicLinkEmail({
+          url,
+          email: identifier,
+        });
 
         await resend.emails.send({
           from: emailFrom,
@@ -36,7 +41,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
 
-    // -------- Dev-only Credentials Provider -------- //
+    // ----- Dev-only Credentials Provider ----- //
     ...(enableDevLogin
       ? [
           CredentialsProvider({
@@ -53,7 +58,6 @@ export const authOptions: NextAuthOptions = {
               const email = credentials?.email?.toLowerCase().trim();
               if (!email) return null;
 
-              // Create if not exists
               let user = await prisma.user.findUnique({
                 where: { email },
               });
@@ -71,7 +75,6 @@ export const authOptions: NextAuthOptions = {
       : []),
   ],
 
-  // -------- Custom Pages -------- //
   pages: {
     verifyRequest: "/auth/check-email",
   },
@@ -81,7 +84,6 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    // ----- Secure Redirect Handling ----- //
     async redirect({ url, baseUrl }) {
       try {
         // Internal relative URLs
@@ -90,35 +92,33 @@ export const authOptions: NextAuthOptions = {
           return `${baseUrl}${safe}`;
         }
 
-        // Absolute same-origin URLs
+        // Same-origin absolute URLs
         const parsed = new URL(url);
-        const root = new URL(baseUrl);
+        const base = new URL(baseUrl);
 
-        if (parsed.origin === root.origin) {
+        if (parsed.origin === base.origin) {
           const safe = getSafeCallbackUrl(
             parsed.pathname + parsed.search,
             "/dashboard"
           );
-          return `${root.origin}${safe}`;
+          return `${base.origin}${safe}`;
         }
 
-        // Reject external URLs
+        // External URLs are not allowed
         return `${baseUrl}/dashboard`;
       } catch {
         return `${baseUrl}/dashboard`;
       }
     },
 
-    // ----- Expose user.id in the session ----- //
     async session({ session, token }) {
-      if (token && session.user) {
+      if (session?.user && token?.sub) {
         (session.user as any).id = token.sub;
       }
       return session;
     },
   },
 
-  // -------- Server-side Auth Logging -------- //
   logger: {
     error(code, metadata) {
       console.error("NextAuth Error:", code, metadata);

@@ -2,8 +2,11 @@
 import NextAuth from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-// Force this route to run on the Node.js runtime (required for Prisma)
+// Force Node runtime (Prisma + NextAuth need Node, not edge)
 export const runtime = "nodejs";
+
+// Make sure this route is always dynamic; don't try to pre-render/SSG it
+export const dynamic = "force-dynamic";
 
 const handler = NextAuth(authOptions);
 

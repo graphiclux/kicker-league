@@ -306,9 +306,9 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                               sizes="40px"
                               // Don't hide on error; just let the text underneath be visible.
                               onError={(e) => {
-                                // @ts-expect-error
-                                e.currentTarget.style.display = "none";
+                                (e.currentTarget as HTMLImageElement).style.display = "none";
                               }}
+
                             />
                           </div>
                           <div>

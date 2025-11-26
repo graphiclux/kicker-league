@@ -143,6 +143,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
     const params = new URLSearchParams();
     if (season) params.set("season", String(season));
     if (week) params.set("week", String(week));
+    // NOTE: keep this matching your existing API route path
     return `/api/league/${leagueId}/leaderboard?${params.toString()}`;
   }, [leagueId, season, week]);
 
@@ -150,6 +151,26 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
     setLoading(true);
     try {
       const res = await fetch(url, { cache: "no-store" });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!res.ok || !contentType.includes("application/json")) {
+        const text = await res.text().catch(() => "");
+        console.error(
+          "Leaderboard API error:",
+          res.status,
+          text.slice(0, 200)
+        );
+        setData({
+          ok: false,
+          error:
+            res.status === 404
+              ? "Leaderboard API not found. Check the route path."
+              : "Leaderboard API returned an unexpected response.",
+        });
+        return;
+      }
+
       const json = (await res.json()) as LeaderboardResponse;
       setData(json);
 
@@ -298,7 +319,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
               const kicker = kickers[r.nflTeam];
               const kickerName = kicker?.name ?? `${r.nflTeam} kicker`;
               const injury = interpretInjuryStatus(
-                kicker?.latest_news?.injury_status,
+                kicker?.latest_news?.injury_status
               );
               const initials = getInitials(kickerName);
               const rank = i + 1;
@@ -457,7 +478,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                   })
                   .map(([k, v]) => {
                     const injury = interpretInjuryStatus(
-                      v.latest_news?.injury_status,
+                      v.latest_news?.injury_status
                     );
                     return (
                       <div

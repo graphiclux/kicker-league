@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUserId } from "@/lib/session-user";
-import { ClaimTeamCard } from "./ClaimTeamCard";
 
 type PageProps = {
   params: { leagueId: string };
@@ -50,7 +49,6 @@ export default async function LeagueTeamPage({ params }: PageProps) {
       id: true,
       nflTeam: true,
       draftSlot: true,
-      teamName: true,
       owner: {
         select: {
           name: true,
@@ -64,7 +62,7 @@ export default async function LeagueTeamPage({ params }: PageProps) {
   if (!team) {
     return (
       <div className="flex flex-col gap-6">
-        <ClaimTeamCard leagueId={leagueId} defaultNflTeam="BUF" />
+        
       </div>
     );
   }

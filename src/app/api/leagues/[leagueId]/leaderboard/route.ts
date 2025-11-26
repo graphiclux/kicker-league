@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 
 /**
  * GET /api/leagues/:leagueId/leaderboard?season=2025&week=1
- * Returns standings for that league/week with per-play breakdown.
+ * - Season standings: total points per team across all weeks
+ * - Weekly leaderboard: points for the selected week
  */
 export async function GET(
   req: Request,
@@ -12,6 +13,7 @@ export async function GET(
   try {
     const leagueId = ctx.params.leagueId;
     const { searchParams } = new URL(req.url);
+
     const season = Number(searchParams.get("season") ?? 2025);
     const week = Number(searchParams.get("week") ?? 1);
 
@@ -32,24 +34,56 @@ export async function GET(
       );
     }
 
-    // Scores for this league/week
-    const scores = await db.score.findMany({
+    // All scores for this league + season (for season-long totals + available weeks)
+    const allSeasonScores = await db.score.findMany({
+      where: { leagueId, season },
+    });
+
+    // Scores for this specific week
+    const scoresThisWeek = await db.score.findMany({
       where: { leagueId, season, week },
       include: {
         leagueTeam: true,
       },
     });
 
-    // NFL team full names (to display nicely)
+    // NFL team full names (nice display)
     const nflTeams = await db.nflTeam.findMany();
     const nameByAbbr = new Map(nflTeams.map((t) => [t.abbr, t.name]));
 
-    // Map LeagueTeamId -> score
-    const scoreByTeamId = new Map(scores.map((s) => [s.leagueTeamId, s]));
+    // ---- Season totals (sum across all weeks) ----
+    const sumByTeamId = new Map<string, number>();
+    for (const s of allSeasonScores) {
+      const prev = sumByTeamId.get(s.leagueTeamId) ?? 0;
+      sumByTeamId.set(s.leagueTeamId, prev + (s.points ?? 0));
+    }
 
-    // Build leaderboard rows for *all* teams in the league,
-    // showing 0 if there is no Score row yet.
-    const rows = league.teams.map((t) => {
+    const teams = league.teams;
+    const seasonTotals = teams.map((t) => {
+      const totalPoints = sumByTeamId.get(t.id) ?? 0;
+      return {
+        leagueTeamId: t.id,
+        nflTeam: t.nflTeam,
+        nflTeamName: nameByAbbr.get(t.nflTeam) ?? t.nflTeam,
+        teamName: t.teamName ?? null,
+        owner: {
+          name: t.owner?.name ?? null,
+          email: t.owner?.email ?? "",
+        },
+        draftSlot: t.draftSlot,
+        totalPoints,
+      };
+    });
+
+    // Sort season standings by total points desc
+    seasonTotals.sort((a, b) => b.totalPoints - a.totalPoints);
+
+    // ---- Weekly rows (current week) ----
+    const scoreByTeamId = new Map(
+      scoresThisWeek.map((s) => [s.leagueTeamId, s])
+    );
+
+    const rows = teams.map((t) => {
       const s = scoreByTeamId.get(t.id);
       const points = s?.points ?? 0;
       const breakdown =
@@ -60,6 +94,7 @@ export async function GET(
         leagueTeamId: t.id,
         nflTeam: t.nflTeam,
         nflTeamName: nameByAbbr.get(t.nflTeam) ?? t.nflTeam,
+        teamName: t.teamName ?? null,
         owner: {
           name: t.owner?.name ?? null,
           email: t.owner?.email ?? "",
@@ -70,8 +105,17 @@ export async function GET(
       };
     });
 
-    // Sort by points desc
+    // Sort weekly leaderboard by points desc
     rows.sort((a, b) => b.points - a.points);
+
+    // Available weeks / latest week from allSeasonScores
+    const weeks = Array.from(
+      new Set(allSeasonScores.map((s) => s.week).filter((w) => w != null))
+    ) as number[];
+
+    weeks.sort((a, b) => a - b);
+
+    const latestWeek = weeks.length > 0 ? weeks[weeks.length - 1] : null;
 
     return NextResponse.json({
       ok: true,
@@ -83,6 +127,9 @@ export async function GET(
       },
       season,
       week,
+      latestWeek,
+      availableWeeks: weeks,
+      seasonTotals,
       rows,
     });
   } catch (err: any) {

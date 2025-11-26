@@ -20,10 +20,21 @@ type Row = {
   leagueTeamId: string;
   nflTeam: string;
   nflTeamName: string;
+  teamName: string | null;
   owner: { name: string | null; email: string };
   draftSlot: number;
   points: number;
   breakdown: { desc: string; pts: number }[];
+};
+
+type SeasonTotalRow = {
+  leagueTeamId: string;
+  nflTeam: string;
+  nflTeamName: string;
+  teamName: string | null;
+  owner: { name: string | null; email: string };
+  draftSlot: number;
+  totalPoints: number;
 };
 
 type LeaderboardResponse = {
@@ -34,6 +45,7 @@ type LeaderboardResponse = {
   latestWeek?: number | null;
   availableWeeks?: number[];
   rows?: Row[];
+  seasonTotals?: SeasonTotalRow[];
   error?: string;
 };
 
@@ -236,7 +248,9 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
   }, []);
 
   const rows = data?.rows ?? [];
+  const seasonTotals = data?.seasonTotals ?? [];
   const showRows = data?.ok && rows.length > 0;
+  const showSeasonTotals = data?.ok && seasonTotals.length > 0;
 
   const availableWeeks = useMemo(() => {
     const weeksFromData = data?.availableWeeks ?? [];
@@ -262,11 +276,11 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
               {data?.league?.name ?? "League leaderboard"}
             </h1>
             <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-              Weekly kicker scoring for{" "}
+              Season standings and weekly kicker scoring for{" "}
               <span className="font-semibold text-slate-800">
                 {data?.season ?? "this season"}
               </span>
-              . Select a week to see how each kicker performed.
+              .
             </p>
           </div>
 
@@ -323,10 +337,85 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
         )}
       </div>
 
-      {/* Main content: leaderboard + kickers sidebar */}
+      {/* Season standings */}
+      <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 sm:text-base">
+              Season standings
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Total points for each team across all weeks.
+            </p>
+          </div>
+        </div>
+
+        {!showSeasonTotals && (
+          <div className="mt-3 rounded-xl border border-yellow-100 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+            No season scores yet. Once scores are imported for this league,
+            standings will appear here.
+          </div>
+        )}
+
+        {showSeasonTotals && (
+          <div className="mt-4 space-y-1.5 text-xs sm:text-sm">
+            {seasonTotals.map((t, index) => {
+              const rank = index + 1;
+              const displayTeamName =
+                t.teamName || t.owner.name || `${t.nflTeam} kicker`;
+              return (
+                <div
+                  key={t.leagueTeamId}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-slate-50">
+                      {rank}
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-900 sm:text-sm">
+                        {displayTeamName}
+                      </div>
+                      <div className="text-[11px] text-slate-500 sm:text-xs">
+                        {t.nflTeam} · Draft slot #{t.draftSlot}
+                      </div>
+                      {t.owner.email && (
+                        <div className="text-[11px] text-slate-400">
+                          {t.owner.email}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[11px] uppercase tracking-wide text-slate-400">
+                      Season points
+                    </div>
+                    <div className="text-lg font-bold text-lime-600 sm:text-xl">
+                      {t.totalPoints}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Main content: weekly leaderboard + kickers sidebar */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)]">
-        {/* Leaderboard */}
+        {/* Weekly leaderboard */}
         <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-slate-900 sm:text-base">
+              Week {selectedWeek} leaderboard
+            </h2>
+            {data?.season && (
+              <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-50">
+                {data.season} Season
+              </span>
+            )}
+          </div>
+
           {data?.ok && (rows.length ?? 0) === 0 && (
             <div className="rounded-xl border border-yellow-100 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
               No scores found for this week yet. Once kicks are imported and
@@ -377,7 +466,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
                           </div>
                         </div>
                         <div className="text-sm font-medium text-slate-900">
-                          {kickerName}
+                          {r.teamName || kickerName}
                         </div>
                         <div className="text-xs text-slate-500">
                           {r.nflTeamName} · Draft slot #{r.draftSlot}
@@ -387,7 +476,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
 
                     <div className="text-right">
                       <div className="text-[11px] uppercase tracking-wide text-slate-400">
-                        Total Points
+                        Week points
                       </div>
                       <div className="text-2xl sm:text-3xl font-bold text-lime-600">
                         {r.points}

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 /**
  * GET /api/leagues/:leagueId/leaderboard?season=2025&week=1
@@ -17,6 +19,10 @@ export async function GET(
     const season = Number(searchParams.get("season") ?? 2025);
     const week = Number(searchParams.get("week") ?? 1);
 
+    // Optional current user (for currentUserTeamId)
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id as string | undefined;
+
     // Load league + teams + owners
     const league = await db.league.findUnique({
       where: { id: leagueId },
@@ -33,6 +39,14 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    const teams = league.teams;
+
+    // Figure out which team (if any) belongs to the current user
+    const currentUserTeamId =
+      userId != null
+        ? teams.find((t) => t.ownerId === userId)?.id ?? null
+        : null;
 
     // All scores for this league + season (for season-long totals + available weeks)
     const allSeasonScores = await db.score.findMany({
@@ -58,7 +72,6 @@ export async function GET(
       sumByTeamId.set(s.leagueTeamId, prev + (s.points ?? 0));
     }
 
-    const teams = league.teams;
     const seasonTotals = teams.map((t) => {
       const totalPoints = sumByTeamId.get(t.id) ?? 0;
       return {
@@ -131,6 +144,7 @@ export async function GET(
       availableWeeks: weeks,
       seasonTotals,
       rows,
+      currentUserTeamId, // <-- used by the client to know if this user has a team
     });
   } catch (err: any) {
     console.error("Error in leaderboard route:", err);

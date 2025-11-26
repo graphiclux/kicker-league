@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { ClaimTeamCard } from "./ClaimTeamCard";
 
 // Local type for kicker info as used in this component
 type LocalKickerInfo = {
@@ -46,6 +47,7 @@ type LeaderboardResponse = {
   availableWeeks?: number[];
   rows?: Row[];
   seasonTotals?: SeasonTotalRow[];
+  currentUserTeamId?: string | null; // NEW
   error?: string;
 };
 
@@ -266,6 +268,8 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
 
   const selectedWeek = week ?? data?.week ?? data?.latestWeek ?? 1;
 
+  const userHasTeam = !!data?.currentUserTeamId;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header: league + filters */}
@@ -336,6 +340,11 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
           </div>
         )}
       </div>
+
+      {/* Claim team card if user has no team */}
+      {!userHasTeam && data?.ok && (
+        <ClaimTeamCard leagueId={leagueId} />
+      )}
 
       {/* Season standings */}
       <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5">

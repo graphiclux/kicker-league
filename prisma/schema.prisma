@@ -8,79 +8,80 @@ datasource db {
 }
 
 model User {
-  id                    String       @id @default(cuid())
-  email                 String       @unique
-  name                  String?
-  createdAt             DateTime     @default(now())
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
 
   // Many-to-many: users <-> leagues (membership)
-  leagues               League[]     @relation("LeagueMembers")
+  leagues League[] @relation("LeagueMembers")
 
   // One-to-many: a user owns many league teams
-  teams                 LeagueTeam[] @relation("UserTeams")
+  teams LeagueTeam[] @relation("UserTeams")
 
   // One-to-many: a user can be commissioner of many leagues
-  commissionedLeagues   League[]     @relation("CommissionerOf")
+  commissionedLeagues League[] @relation("CommissionerOf")
 
-    // --- Auth fields for NextAuth / Auth.js ---
+  // --- Auth fields for NextAuth / Auth.js ---
   emailVerified DateTime?
   image         String?
 
-  accounts      Account[]
-  sessions      Session[]
-
+  accounts Account[]
+  sessions Session[]
 }
 
 model League {
-  id             String       @id @default(cuid())
-  name           String
-  seasonYear     Int
-  maxTeams       Int          @default(32)
+  id         String @id @default(cuid())
+  name       String
+  seasonYear Int
+  maxTeams   Int    @default(32)
 
   // Commissioner (one user) with a named relation
   commissionerId String
-  commissioner   User         @relation("CommissionerOf", fields: [commissionerId], references: [id])
+  commissioner   User   @relation("CommissionerOf", fields: [commissionerId], references: [id])
 
   // Members (many users) — back side of the m2m
-  members        User[]       @relation("LeagueMembers")
+  members User[] @relation("LeagueMembers")
 
   // Teams in this league
-  teams          LeagueTeam[]
+  teams LeagueTeam[]
 
   // Scores (by team per week)
-  scores         Score[]
+  scores Score[]
 
-  createdAt      DateTime     @default(now())
+  createdAt DateTime @default(now())
 }
 
 model LeagueTeam {
-  id        String  @id @default(cuid())
+  id String @id @default(cuid())
 
   // League relation
-  leagueId  String
-  league    League  @relation(fields: [leagueId], references: [id])
+  leagueId String
+  league   League @relation(fields: [leagueId], references: [id])
 
   // Which NFL team this fantasy slot represents
-  nflTeam   String  // e.g., "BUF", "KC"
+  nflTeam String // e.g., "BUF", "KC"
 
   // Owner relation (user who owns this team in the league)
-  ownerId   String
-  owner     User    @relation("UserTeams", fields: [ownerId], references: [id])
+  ownerId String
+  owner   User   @relation("UserTeams", fields: [ownerId], references: [id])
 
   draftSlot Int
 
-  scores    Score[]
+  teamName String?
+
+  scores Score[]
 
   @@unique([leagueId, nflTeam], name: "league_team_unique")
   @@unique([leagueId, ownerId], name: "league_owner_unique")
 }
 
 model Week {
-  id        String   @id @default(cuid())
-  season    Int
-  week      Int
-  startsAt  DateTime
-  endsAt    DateTime
+  id       String   @id @default(cuid())
+  season   Int
+  week     Int
+  startsAt DateTime
+  endsAt   DateTime
 
   @@unique([season, week], name: "season_week")
 }
@@ -90,53 +91,54 @@ model KickPlay {
   season     Int
   week       Int
   gameId     String
-  possession String    // team abbr attempting the kick
-  playType   String    // "field_goal" | "extra_point"
+  possession String // team abbr attempting the kick
+  playType   String // "field_goal" | "extra_point"
   distance   Int?
-  result     String    // "made" | "missed"
-  blocked    Boolean   @default(false)
-  createdAt  DateTime  @default(now())
+  result     String // "made" | "missed"
+  blocked    Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }
 
 model Score {
-  id           String      @id @default(cuid())
+  id String @id @default(cuid())
 
   // League this score belongs to (for filtering)
-  leagueId     String
-  league       League      @relation(fields: [leagueId], references: [id])
+  leagueId String
+  league   League @relation(fields: [leagueId], references: [id])
 
   // Specific fantasy team (league slot) being scored
   leagueTeamId String
-  leagueTeam   LeagueTeam  @relation(fields: [leagueTeamId], references: [id])
+  leagueTeam   LeagueTeam @relation(fields: [leagueTeamId], references: [id])
 
-  season       Int
-  week         Int
-  points       Int
-  breakdown    Json
-  createdAt    DateTime    @default(now())
+  season    Int
+  week      Int
+  points    Int
+  breakdown Json
+  createdAt DateTime @default(now())
 
   @@unique([leagueTeamId, season, week])
   @@index([leagueId, season, week])
 }
+
 model NflTeam {
-  abbr String @id          // e.g. "BUF"
-  name String               // e.g. "Buffalo Bills"
+  abbr String @id // e.g. "BUF"
+  name String // e.g. "Buffalo Bills"
 }
 
 model Account {
-  id                String  @id @default(cuid())
+  id                String @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
 
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  refresh_token String? @db.Text
+  access_token  String? @db.Text
+  expires_at    Int?
+  token_type    String?
+  scope         String?
+  id_token      String? @db.Text
+  session_state String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -159,5 +161,3 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
-
-

@@ -27,7 +27,6 @@ export async function POST(
     );
   }
 
-  // Make sure league exists and user is at least a member or commish
   const league = await db.league.findFirst({
     where: {
       id: leagueId,
@@ -45,7 +44,6 @@ export async function POST(
     return NextResponse.json({ error: "League not found" }, { status: 404 });
   }
 
-  // See if user already has a team
   const existing = await db.leagueTeam.findFirst({
     where: {
       leagueId,
@@ -54,9 +52,8 @@ export async function POST(
   });
 
   const draftSlot =
-    existing?.draftSlot ?? (league.teams.length > 0
-      ? league.teams.length + 1
-      : 1);
+    existing?.draftSlot ??
+    (league.teams.length > 0 ? league.teams.length + 1 : 1);
 
   const team = existing
     ? await db.leagueTeam.update({

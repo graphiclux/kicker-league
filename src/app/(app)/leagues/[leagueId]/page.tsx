@@ -151,13 +151,13 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
     setLoading(true);
     try {
       const res = await fetch(url, { cache: "no-store" });
-
       const contentType = res.headers.get("content-type") || "";
 
-      if (!res.ok || !contentType.includes("application/json")) {
+      // If not JSON at all (HTML error page, redirect, etc.)
+      if (!contentType.includes("application/json")) {
         const text = await res.text().catch(() => "");
         console.error(
-          "Leaderboard API error:",
+          "Leaderboard API non-JSON response:",
           res.status,
           text.slice(0, 200)
         );
@@ -166,15 +166,34 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
           error:
             res.status === 404
               ? "Leaderboard API not found. Check the route path."
-              : "Leaderboard API returned an unexpected response.",
+              : "Leaderboard API returned a non-JSON response.",
         });
         return;
       }
 
       const json = (await res.json()) as LeaderboardResponse;
+
+      // If the API itself reports an error (ok: false)
+      if (!res.ok || !json.ok) {
+        console.error(
+          "Leaderboard API error payload:",
+          res.status,
+          json.error
+        );
+        setData({
+          ok: false,
+          error:
+            json.error ??
+            (res.status === 404
+              ? "Leaderboard API not found. Check the route path."
+              : `Leaderboard API error (status ${res.status}).`),
+        });
+        return;
+      }
+
+      // Happy path – valid data
       setData(json);
 
-      // If no explicit week was chosen, but we get latestWeek from the API, adopt it.
       if (!week && json.latestWeek && !appliedDefaultWeek) {
         setWeek(json.latestWeek);
         setAppliedDefaultWeek(true);
@@ -184,6 +203,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
         setSeason(json.season);
       }
     } catch (e: any) {
+      console.error("Failed to load leaderboard:", e);
       setData({ ok: false, error: e?.message ?? "Failed to load" });
     } finally {
       setLoading(false);
@@ -296,9 +316,9 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
         </div>
 
         {/* Error */}
-        {!data?.ok && (
+        {!data?.ok && data?.error && (
           <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {data?.error ?? "Failed to load leaderboard"}
+            {data.error}
           </div>
         )}
       </div>

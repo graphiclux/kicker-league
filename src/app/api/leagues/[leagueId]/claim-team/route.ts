@@ -1,4 +1,3 @@
-// src/app/api/leagues/[leagueId]/claim-team/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUserId } from "@/lib/session-user";
@@ -96,6 +95,17 @@ export async function POST(
     chosenNflTeam = firstAvailable.abbr;
   }
 
+  // Extra safety + TS narrowing
+  if (!chosenNflTeam) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Could not determine an NFL team to assign.",
+      },
+      { status: 500 }
+    );
+  }
+
   // Next draftSlot
   const maxSlot =
     league.teams.reduce((max, t) => Math.max(max, t.draftSlot), 0) || 0;
@@ -105,7 +115,7 @@ export async function POST(
     data: {
       leagueId,
       ownerId: userId,
-      nflTeam: chosenNflTeam,
+      nflTeam: chosenNflTeam, // now narrowed to string
       draftSlot: nextDraftSlot,
       teamName: teamNameRaw,
     },

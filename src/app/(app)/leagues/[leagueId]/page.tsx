@@ -76,7 +76,7 @@ function interpretInjuryStatus(status: string | null | undefined) {
 }
 
 /**
- * Which weeks we show in the dropdown – limited to 1-18
+ * Which weeks we show in the dropdown – limited to 1–18
  */
 const WEEK_OPTIONS = Array.from({ length: 18 }, (_, i) => i + 1);
 
@@ -143,7 +143,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
     const params = new URLSearchParams();
     if (season) params.set("season", String(season));
     if (week) params.set("week", String(week));
-    // NOTE: keep this matching your existing API route path
+    // MUST match: src/app/api/leagues/[leagueId]/leaderboard/route.ts
     return `/api/leagues/${leagueId}/leaderboard?${params.toString()}`;
   }, [leagueId, season, week]);
 

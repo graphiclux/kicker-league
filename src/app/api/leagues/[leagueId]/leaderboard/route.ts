@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireUserId } from "@/lib/session-user";
 
 /**
  * GET /api/leagues/:leagueId/leaderboard?season=2025&week=1
@@ -19,9 +18,16 @@ export async function GET(
     const season = Number(searchParams.get("season") ?? 2025);
     const week = Number(searchParams.get("week") ?? 1);
 
-    // Optional current user (for currentUserTeamId)
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id as string | undefined;
+    // Current user (for currentUserTeamId)
+    // This will require the caller to be authenticated; matches your (app) group usage.
+    let userId: string | null = null;
+    try {
+      const sessionUser = await requireUserId();
+      userId = sessionUser.userId;
+    } catch {
+      // If this endpoint is ever hit unauthenticated, we just won't have currentUserTeamId
+      userId = null;
+    }
 
     // Load league + teams + owners
     const league = await db.league.findUnique({
@@ -144,7 +150,7 @@ export async function GET(
       availableWeeks: weeks,
       seasonTotals,
       rows,
-      currentUserTeamId, // <-- used by the client to know if this user has a team
+      currentUserTeamId,
     });
   } catch (err: any) {
     console.error("Error in leaderboard route:", err);

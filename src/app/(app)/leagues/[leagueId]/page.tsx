@@ -144,7 +144,7 @@ function LeaguePageInner({ params }: { params: { leagueId: string } }) {
     if (season) params.set("season", String(season));
     if (week) params.set("week", String(week));
     // NOTE: keep this matching your existing API route path
-    return `/api/league/${leagueId}/leaderboard?${params.toString()}`;
+    return `/api/leagues/${leagueId}/leaderboard?${params.toString()}`;
   }, [leagueId, season, week]);
 
   async function loadLeaderboard() {

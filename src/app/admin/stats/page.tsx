@@ -1,10 +1,34 @@
 // src/app/admin/stats/page.tsx
 import { db } from "@/lib/db";
 import { format } from "date-fns";
+import { getCurrentUser } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminStatsPage() {
+  // --- Auth guard ---------------------------------------------------------
+  const user = (await getCurrentUser()) as any;
+
+  if (!user?.id) {
+    redirect("/");
+  }
+
+  // Optional: restrict to specific admin emails via env
+  const rawAdminEmails = process.env.ADMIN_EMAILS || "";
+  const adminEmails = rawAdminEmails
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  const userEmail = (user.email || "").toLowerCase();
+
+  if (adminEmails.length > 0 && !adminEmails.includes(userEmail)) {
+    // Logged in but not in the admin list
+    redirect("/");
+  }
+
+  // --- Data fetching ------------------------------------------------------
   const [lastKick, lastScore, kickGroup] = await Promise.all([
     db.kickPlay.findFirst({
       orderBy: { createdAt: "desc" },
@@ -20,6 +44,7 @@ export default async function AdminStatsPage() {
     }),
   ]);
 
+  // --- UI -----------------------------------------------------------------
   return (
     <main className="min-h-screen w-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
       <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">

@@ -35,8 +35,29 @@ export async function GET(req: Request) {
   const endpoint = `https://api.sportsblaze.com/nfl/v1/boxscores/daily/${date}.json?key=${apiKey}`;
 
   let data: any;
+
   try {
     const resp = await fetch(endpoint, { cache: "no-store" });
+
+    // ✅ Treat 404 as "no games / no boxscores for this date"
+    if (resp.status === 404) {
+      const bodyText = await resp.text().catch(() => "");
+      return NextResponse.json(
+        {
+          ok: true,
+          date,
+          totalPlaysCreated: 0,
+          gamesProcessed: 0,
+          games: [],
+          note: "No boxscores found for this date (likely no NFL games).",
+          upstreamStatus: 404,
+          upstreamBody: bodyText || undefined,
+        },
+        { status: 200 }
+      );
+    }
+
+    // Other non-OK statuses are real errors
     if (!resp.ok) {
       const text = await resp.text();
       return NextResponse.json(
@@ -48,10 +69,15 @@ export async function GET(req: Request) {
         { status: 502 }
       );
     }
+
     data = await resp.json();
   } catch (err: any) {
     return NextResponse.json(
-      { ok: false, error: "Failed to fetch SportsBlaze", detail: String(err) },
+      {
+        ok: false,
+        error: "Failed to fetch SportsBlaze",
+        detail: String(err),
+      },
       { status: 502 }
     );
   }
@@ -60,10 +86,6 @@ export async function GET(req: Request) {
   const summary: any[] = [];
   let totalPlaysCreated = 0;
 
-  // NOTE: KickPlay model:
-  // id, season, week, gameId, possession, playType, distance, result, blocked
-  // We'll approximate distance later – for now we set null and rely
-  // on results (made/missed) + XP vs FG.
   for (const game of games) {
     const seasonYear: number | undefined = game?.season?.year;
     const week: number | undefined = game?.season?.week;
@@ -107,9 +129,6 @@ export async function GET(req: Request) {
         xpBlocked,
       });
 
-      // ---- Idempotent diffing vs existing KickPlay rows ----
-
-      // Helper to count existing plays for this game/team
       const baseWhere = {
         season: seasonYear,
         week,
@@ -117,46 +136,51 @@ export async function GET(req: Request) {
         possession,
       } as const;
 
-      const [existingFgMade, existingFgMissed, existingXpMade, existingXpMissed, existingXpBlocked] =
-        await Promise.all([
-          db.kickPlay.count({
-            where: {
-              ...baseWhere,
-              playType: "field_goal",
-              result: "made",
-            },
-          }),
-          db.kickPlay.count({
-            where: {
-              ...baseWhere,
-              playType: "field_goal",
-              result: "missed",
-            },
-          }),
-          db.kickPlay.count({
-            where: {
-              ...baseWhere,
-              playType: "extra_point",
-              result: "made",
-            },
-          }),
-          db.kickPlay.count({
-            where: {
-              ...baseWhere,
-              playType: "extra_point",
-              result: "missed",
-              blocked: false,
-            },
-          }),
-          db.kickPlay.count({
-            where: {
-              ...baseWhere,
-              playType: "extra_point",
-              result: "missed",
-              blocked: true,
-            },
-          }),
-        ]);
+      const [
+        existingFgMade,
+        existingFgMissed,
+        existingXpMade,
+        existingXpMissed,
+        existingXpBlocked,
+      ] = await Promise.all([
+        db.kickPlay.count({
+          where: {
+            ...baseWhere,
+            playType: "field_goal",
+            result: "made",
+          },
+        }),
+        db.kickPlay.count({
+          where: {
+            ...baseWhere,
+            playType: "field_goal",
+            result: "missed",
+          },
+        }),
+        db.kickPlay.count({
+          where: {
+            ...baseWhere,
+            playType: "extra_point",
+            result: "made",
+          },
+        }),
+        db.kickPlay.count({
+          where: {
+            ...baseWhere,
+            playType: "extra_point",
+            result: "missed",
+            blocked: false,
+          },
+        }),
+        db.kickPlay.count({
+          where: {
+            ...baseWhere,
+            playType: "extra_point",
+            result: "missed",
+            blocked: true,
+          },
+        }),
+      ]);
 
       const toCreateFgMade = Math.max(0, fgMade - existingFgMade);
       const toCreateFgMissed = Math.max(0, fgMissed - existingFgMissed);
@@ -164,9 +188,9 @@ export async function GET(req: Request) {
       const toCreateXpMissed = Math.max(0, xpMissed - existingXpMissed);
       const toCreateXpBlocked = Math.max(0, xpBlocked - existingXpBlocked);
 
-      const newPlays = [];
+      const newPlays: any[] = [];
 
-      // NOTE: distance is unknown per attempt; we leave it null for now.
+      // distance is unknown per attempt; left as null for now
       for (let i = 0; i < toCreateFgMade; i++) {
         newPlays.push({
           season: seasonYear,

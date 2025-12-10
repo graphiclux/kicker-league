@@ -4,6 +4,8 @@ export const revalidate = 0;
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { isCronAuthorized } from "@/lib/cronAuth";
+
 
 /**
  * Ingests SportsBlaze daily boxscores for a given date and
@@ -18,6 +20,12 @@ import { db } from "@/lib/db";
  * If date is omitted it defaults to today's UTC date (YYYY-MM-DD).
  */
 export async function GET(req: Request) {
+  if (!isCronAuthorized(req)) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
   const url = new URL(req.url);
   const dateParam = url.searchParams.get("date");
 
@@ -111,11 +119,18 @@ export async function GET(req: Request) {
       const fgAttempts: number = stats.field_goals_attempts ?? 0;
       const fgMade: number = stats.field_goals_made ?? 0;
       const fgMissed: number = stats.field_goals_missed ?? 0;
+      const fgTotalYards: number = stats.field_goals_total_yards ?? 0;
+      // Approximate average FG distance if we have totals
+      const avgFgDistance: number | null =
+        fgAttempts > 0 && fgTotalYards > 0
+          ? Math.round(fgTotalYards / fgAttempts)
+          : null;
 
       const xpAttempts: number = stats.extra_points_attempts ?? 0;
       const xpMade: number = stats.extra_points_made ?? 0;
       const xpMissed: number = stats.extra_points_missed ?? 0;
       const xpBlocked: number = stats.extra_points_blocked ?? 0;
+
 
       perSideStats.push({
         side,
@@ -198,7 +213,7 @@ export async function GET(req: Request) {
           gameId,
           possession,
           playType: "field_goal",
-          distance: null,
+          distance: avgFgDistance,
           result: "made",
           blocked: false,
         });
@@ -211,7 +226,7 @@ export async function GET(req: Request) {
           gameId,
           possession,
           playType: "field_goal",
-          distance: null,
+          distance: avgFgDistance,
           result: "missed",
           blocked: false,
         });

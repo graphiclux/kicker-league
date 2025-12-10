@@ -5,12 +5,22 @@ export const revalidate = 0;
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { scoreKick } from "@/lib/scoring";
+import { isCronAuthorized } from "@/lib/cronAuth";
+
 
 /**
  * Sums KickPlay -> writes to Score per league team.
  * NOW: uses ?season=&week= query params (defaults to 2025 / 1).
  */
 export async function GET(req: Request) {
+  if (!isCronAuthorized(req)) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  
   const { searchParams } = new URL(req.url);
 
   const seasonParam = searchParams.get("season");

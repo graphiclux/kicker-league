@@ -540,6 +540,7 @@ export default function Mobile() {
               ))}
               {nfl.data?.map((t) => (
                 <View style={s.card} key={t.code}>
+                  {t.assignments[0]?.player.imageUrl && <Image source={{ uri: t.assignments[0].player.imageUrl }} style={s.kickerAvatar} />}
                   <Text style={s.title}>
                     {t.code} · {t.name}
                   </Text>
@@ -703,6 +704,7 @@ const s = StyleSheet.create({
   buttonText: { color: '#101318', fontWeight: '700', fontSize: 14 },
   secondary: { backgroundColor: '#242A33' },
   card: { backgroundColor: '#1A1F27', borderRadius: 8, padding: 18, marginVertical: 4 },
+  kickerAvatar: { width: 44, height: 44, borderRadius: 22, marginBottom: 8, borderWidth: 2, borderColor: '#F5C451' },
   dangerZone: { borderTopWidth: 1, borderColor: '#49363A', paddingTop: 18, marginTop: 22 },
   offlineNotice: { backgroundColor: '#242A33', borderLeftWidth: 3, borderLeftColor: '#F5C451', borderRadius: 8, padding: 14, marginVertical: 8 },
   connectionNotice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: '#242A33', borderRadius: 8, padding: 12 },

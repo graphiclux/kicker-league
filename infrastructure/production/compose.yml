@@ -1,0 +1,106 @@
+name: aing-production
+x-runtime: &runtime
+  env_file: ../../.env.production
+  environment:
+    NODE_ENV: production
+    COOKIE_SECURE: 'true'
+  restart: unless-stopped
+  init: true
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '5'}
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: aing_owner
+      POSTGRES_DB: aing
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set database owner password}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U aing_owner -d aing]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    mem_limit: 2g
+  redis:
+    image: redis:7.4-bookworm
+    command: [redis-server, --appendonly, 'yes', --maxmemory, 256mb, --maxmemory-policy, noeviction]
+    volumes: [redis-data:/data]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    mem_limit: 384m
+  migrate:
+    image: ${AING_API_IMAGE:-aing-api:latest}
+    env_file: ../../.env.production
+    environment:
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set owner connection string}
+      NODE_ENV: production
+    command: [sh, -c, 'pnpm db:migrate && pnpm exec tsx infrastructure/scripts/runtime-role.ts && pnpm db:seed']
+    restart: 'no'
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    <<: *runtime
+    image: ${AING_API_IMAGE:-aing-api:latest}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    mem_limit: 768m
+  worker:
+    <<: *runtime
+    image: ${AING_WORKER_IMAGE:-aing-worker:latest}
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "const R=require('ioredis');const r=new R(process.env.REDIS_URL);r.get('aing:worker:heartbeat').then(v=>{r.disconnect();process.exit(Date.now()-Number(v)<15000?0:1)}).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    mem_limit: 768m
+  web:
+    <<: *runtime
+    image: ${AING_WEB_IMAGE:-aing-web:latest}
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    mem_limit: 768m
+  nginx:
+    image: nginx:1.28-bookworm
+    ports: ['80:80', '443:443']
+    environment:
+      DOMAIN: ${DOMAIN:?Set public domain}
+      NGINX_ENVSUBST_FILTER: DOMAIN
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - acme:/var/www/certbot:ro
+    depends_on:
+      web: {condition: service_healthy}
+    restart: unless-stopped
+    mem_limit: 128m
+  certbot:
+    image: certbot/certbot:v4.2.0
+    profiles: [tls]
+    volumes: [letsencrypt:/etc/letsencrypt, acme:/var/www/certbot]
+volumes:
+  postgres-data:
+  redis-data:
+  letsencrypt:
+  acme:

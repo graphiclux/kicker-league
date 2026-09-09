@@ -1,0 +1,55 @@
+{
+  "name": "and-its-no-good",
+  "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "test": "vitest run",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "test:integration": "tsx tests/integration.ts",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.18.0",
+    "@types/nodemailer": "^7.0.0",
+    "prisma": "6.19.0",
+    "tsx": "^4.20.5",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
+    "@types/supertest": "^6.0.3"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.0",
+    "argon2": "^0.44.0",
+    "bullmq": "^5.58.5",
+    "csv-parse": "7.0.2",
+    "ioredis": "^5.7.0",
+    "nodemailer": "10.0.1",
+    "zod": "^4.1.5",
+    "socket.io-client": "^4.8.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "argon2",
+      "esbuild",
+      "sharp"
+    ],
+    "overrides": {
+      "effect": "^3.20.0",
+      "deepmerge-ts": "^8.0.0",
+      "multer": "^2.3.0",
+      "decode-uri-component": "^0.5.0",
+      "xcode>uuid": "11.1.1"
+    }
+  }
+}

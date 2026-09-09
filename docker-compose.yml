@@ -1,0 +1,98 @@
+name: aing
+x-app: &app
+  env_file: .env
+  restart: unless-stopped
+  init: true
+  security_opt: [no-new-privileges:true]
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aing}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aing_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aing}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  redis:
+    image: redis:7.4-bookworm
+    command: [redis-server, --appendonly, 'yes', --maxmemory-policy, noeviction]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports: ['127.0.0.1:${MAILPIT_PORT:-8027}:8025']
+    restart: unless-stopped
+  adminer:
+    image: adminer:5
+    ports: ['127.0.0.1:${ADMINER_PORT:-8081}:8080']
+    environment: {ADMINER_DEFAULT_SERVER: postgres}
+    restart: unless-stopped
+  migrate:
+    <<: *app
+    build: {context: ., dockerfile: infrastructure/docker.Dockerfile, target: development}
+    command: [pnpm, db:migrate]
+    restart: 'no'
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    <<: *app
+    build: {context: ., dockerfile: infrastructure/docker.Dockerfile, target: api}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+  worker:
+    <<: *app
+    build: {context: ., dockerfile: infrastructure/docker.Dockerfile, target: worker}
+    depends_on:
+      api: {condition: service_healthy}
+  web:
+    <<: *app
+    build: {context: ., dockerfile: infrastructure/docker.Dockerfile, target: web}
+    environment: {PORT: '3000', NODE_ENV: production}
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+  nginx:
+    image: nginx:1.28-bookworm
+    networks:
+      default: {}
+      ddev_default:
+        aliases: [aing-gateway]
+    volumes: ['./infrastructure/nginx/local.conf:/etc/nginx/conf.d/default.conf:ro']
+    depends_on:
+      web: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://127.0.0.1/ > /dev/null && curl -fsS http://127.0.0.1/api/health > /dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  ddev_default:
+    external: true

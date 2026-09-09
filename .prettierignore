@@ -1,0 +1,10 @@
+node_modules
+.pnpm-store
+pnpm-lock.yaml
+**/dist
+**/.next
+**/.expo
+**/.turbo
+.local-certs
+backups
+prisma/migrations

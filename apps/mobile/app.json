@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "And It's No Good",
+    "slug": "and-its-no-good",
+    "scheme": "anditsnogood",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.anditsnogood.app" },
+    "android": { "package": "com.anditsnogood.app", "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#101318" } },
+    "plugins": ["expo-router", "expo-secure-store", "expo-notifications"],
+    "experiments": { "typedRoutes": true }
+  }
+}

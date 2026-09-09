@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  displayName String
+  role String @default("USER")
+  suspended Boolean @default(false)
+  verifiedAt DateTime?
+  notificationsEnabled Boolean @default(true)
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  sessions Session[]
+  tokens AuthToken[]
+  teams FantasyTeam[]
+  notifications Notification[]
+  devices PushDevice[]
+}
+model Session {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id])
+  tokenHash String @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+model AuthToken {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id])
+  hash String @unique
+  purpose String
+  expiresAt DateTime
+  usedAt DateTime?
+}
+model ScoringRule {
+  id String @id @default(cuid())
+  code String @unique
+  shortMiss Int @default(2)
+  longMiss Int @default(1)
+  xpMiss Int @default(3)
+  xpBlocked Int @default(3)
+  longMade Int @default(-1)
+  shortMax Int @default(29)
+  longMadeMin Int @default(51)
+  createdAt DateTime @default(now())
+  seasons Season[]
+}
+model Season {
+  year Int @id
+  name String
+  ruleId String
+  rule ScoringRule @relation(fields:[ruleId],references:[id])
+  status String @default("ACTIVE")
+  weeks Week[]
+  leagues League[]
+  events KickingEvent[]
+  scores TeamWeekScore[]
+}
+model Week {
+  id String @id @default(cuid())
+  season Int
+  seasonRef Season @relation(fields:[season],references:[year])
+  week Int
+  lockedAt DateTime?
+  @@unique([season,week])
+}
+model NflTeam {
+  code String @id
+  city String
+  name String
+  conference String
+  division String
+  assignments PlayerAssignment[]
+  events KickingEvent[]
+  rosters Roster[]
+  scores TeamWeekScore[]
+  availability PlayerAvailability[]
+}
+model Player {
+  id String @id @default(cuid())
+  name String
+  externalId String? @unique
+  assignments PlayerAssignment[]
+  availability PlayerAvailability[]
+}
+model PlayerAssignment {
+  id String @id @default(cuid())
+  playerId String
+  player Player @relation(fields:[playerId],references:[id])
+  teamCode String
+  team NflTeam @relation(fields:[teamCode],references:[code])
+  designation String @default("PRIMARY_KICKER")
+  startsAt DateTime @default(now())
+  endsAt DateTime?
+  @@index([teamCode,endsAt])
+}
+model PlayerAvailability {
+  id String @id @default(cuid())
+  playerId String
+  player Player @relation(fields:[playerId],references:[id])
+  teamCode String
+  team NflTeam @relation(fields:[teamCode],references:[code])
+  status String
+  reason String?
+  source String
+  observedAt DateTime @default(now())
+  startsAt DateTime?
+  endsAt DateTime?
+  raw Json?
+  @@index([teamCode,observedAt])
+  @@index([playerId,observedAt])
+}
+model League {
+  id String @id @default(cuid())
+  season Int
+  seasonRef Season @relation(fields:[season],references:[year])
+  commissionerId String
+  name String
+  inviteCode String @unique
+  maxTeams Int
+  status String @default("LOBBY")
+  scheduledAt DateTime?
+  pickSeconds Int @default(60)
+  currentPick Int @default(1)
+  deadline DateTime?
+  pauseRemainingMs Int?
+  createdAt DateTime @default(now())
+  teams FantasyTeam[]
+  rosters Roster[]
+}
+model FantasyTeam {
+  id String @id @default(cuid())
+  leagueId String
+  league League @relation(fields:[leagueId],references:[id])
+  ownerId String
+  owner User @relation(fields:[ownerId],references:[id])
+  name String
+  draftOrder Int?
+  rankings String[] @default([])
+  roster Roster?
+  @@unique([leagueId,ownerId])
+  @@unique([leagueId,draftOrder])
+  @@unique([id,leagueId])
+}
+model Roster {
+  id String @id @default(cuid())
+  leagueId String
+  league League @relation(fields:[leagueId],references:[id])
+  fantasyTeamId String @unique
+  fantasyTeam FantasyTeam @relation(fields:[fantasyTeamId,leagueId],references:[id,leagueId])
+  teamCode String
+  nflTeam NflTeam @relation(fields:[teamCode],references:[code])
+  displayedKicker String?
+  pickNumber Int
+  source String
+  draftedAt DateTime @default(now())
+  @@unique([fantasyTeamId,leagueId])
+  @@unique([leagueId,teamCode])
+  @@unique([leagueId,pickNumber])
+}
+model KickingEvent {
+  id String @id @default(cuid())
+  season Int
+  seasonRef Season @relation(fields:[season],references:[year])
+  week Int
+  teamCode String
+  team NflTeam @relation(fields:[teamCode],references:[code])
+  kicker String
+  gameId String?
+  eventType String
+  result String
+  distance Int?
+  points Int
+  ruleCode String
+  provider String
+  providerEventId String
+  importId String?
+  import StatImport? @relation(fields:[importId],references:[id])
+  raw Json
+  occurredAt DateTime?
+  voidedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([provider,providerEventId])
+  @@index([season,week,teamCode])
+}
+model TeamWeekScore {
+  id String @id @default(cuid())
+  season Int
+  seasonRef Season @relation(fields:[season],references:[year])
+  week Int
+  teamCode String
+  team NflTeam @relation(fields:[teamCode],references:[code])
+  points Int
+  eventCount Int
+  recalculatedAt DateTime @default(now())
+  @@unique([season,week,teamCode])
+}
+model StatImport {
+  id String @id @default(cuid())
+  uploadedBy String
+  filename String
+  mode String
+  provider String @default("csv")
+  contentHash String
+  status String @default("PREVIEW")
+  rows Json
+  preview Json
+  error String?
+  reason String
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  events KickingEvent[]
+}
+model AuditLog {
+  id String @id @default(cuid())
+  actorId String
+  action String
+  entityId String
+  leagueId String?
+  before Json?
+  after Json?
+  reason String
+  createdAt DateTime @default(now())
+  @@index([entityId,createdAt])
+  @@index([leagueId,createdAt])
+}
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  title String
+  body String
+  data Json
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId,createdAt])
+}
+model PushDevice {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  token String @unique
+  createdAt DateTime @default(now())
+}
+model Outbox {
+  attempts Int @default(0)
+  nextAttemptAt DateTime?
+  lastError String?
+  @@index([nextAttemptAt])
+  id String @id @default(cuid())
+  topic String
+  payload Json
+  deliveredAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([deliveredAt,createdAt])
+}

@@ -1,0 +1,5 @@
+# Opt-in LAN gateway for phone testing. AING_WIFI_HOST must be this Mac's LAN IP.
+services:
+  nginx:
+    ports:
+      - '${AING_WIFI_HOST:?Set AING_WIFI_HOST to the Mac LAN IP}:8090:80'

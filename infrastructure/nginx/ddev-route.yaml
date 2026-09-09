@@ -1,0 +1,26 @@
+http:
+  routers:
+    aing-http:
+      rule: Host(`anditsnogood.ddev.site`)
+      entryPoints: [http-80]
+      middlewares: [aing-https]
+      service: aing
+    aing-https:
+      rule: Host(`anditsnogood.ddev.site`)
+      entryPoints: [http-443]
+      tls: {}
+      service: aing
+  middlewares:
+    aing-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+  services:
+    aing:
+      loadBalancer:
+        servers:
+          - url: http://aing-gateway:80
+tls:
+  certificates:
+    - certFile: /mnt/ddev-global-cache/traefik/certs/anditsnogood.crt
+      keyFile: /mnt/ddev-global-cache/traefik/certs/anditsnogood.key

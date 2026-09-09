@@ -1,0 +1,5 @@
+# Explicit opt-in loopback port for adb reverse. The web URL stays on DDEV HTTPS.
+services:
+  nginx:
+    ports:
+      - '127.0.0.1:8090:80'

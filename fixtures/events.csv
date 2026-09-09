@@ -1,0 +1,4 @@
+season,week,nfl_team,kicker,event_type,distance,result,event_id
+2026,2,BUF,Example Buffalo starter,FIELD_GOAL,27,MISSED,example-buf-w2-1
+2026,2,BUF,Example Buffalo backup,EXTRA_POINT,,MISSED,example-buf-w2-2
+2026,2,DAL,Example Dallas kicker,FIELD_GOAL,58,MADE,example-dal-w2-1

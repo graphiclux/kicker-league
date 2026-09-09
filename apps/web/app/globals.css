@@ -73,6 +73,7 @@ textarea {
 .team-name-form .field { flex: 1; margin-bottom: 0; }
 .scoring-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .scoring-editor button { grid-column: 1 / -1; justify-self: start; }
+.kicker-avatar { width: 42px; height: 42px; object-fit: cover; border-radius: 50%; margin: 10px 0 4px; border: 2px solid var(--lime); }
 select {
   width: auto;
   max-width: 100%;

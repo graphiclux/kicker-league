@@ -1332,6 +1332,7 @@ function Nfl({ nfl, season, week }: { nfl: NflTeamView[]; season: number; week: 
               <strong>
                 {t.city} {t.name}
               </strong>
+              {t.assignments[0]?.player.imageUrl && <img className="kicker-avatar" src={t.assignments[0].player.imageUrl} alt="" />}
               <small>{t.assignments[0]?.player.name || 'Kicker to be confirmed'}</small>
             </div>
             <b>{signed(scores.data?.find((s) => s.teamCode === t.code)?.points || 0)}</b>
@@ -1798,6 +1799,7 @@ function Admin({
                     api.post('/admin/assignments', {
                       teamCode: f.get('teamCode'),
                       playerName: f.get('playerName'),
+                      imageUrl: f.get('imageUrl') || null,
                       designation: f.get('designation'),
                       reason,
                     }),
@@ -1814,6 +1816,9 @@ function Admin({
               </Field>
               <Field label="Kicker name">
                 <input name="playerName" minLength={2} required />
+              </Field>
+              <Field label="Headshot URL (optional)">
+                <input name="imageUrl" type="url" placeholder="https://…" />
               </Field>
               <Field label="Designation">
                 <select name="designation">

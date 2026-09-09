@@ -365,6 +365,7 @@ export class AdminController {
       .object({
         teamCode: z.enum(TEAM_CODES),
         playerName: z.string().trim().min(2).max(100),
+        imageUrl: z.url().max(1000).nullable().optional(),
         designation: z.enum(['PRIMARY_KICKER', 'BACKUP_KICKER']),
         reason: reasonSchema,
       })
@@ -378,7 +379,7 @@ export class AdminController {
         where: { teamCode: d.teamCode, designation: d.designation, endsAt: null },
         data: { endsAt: new Date() },
       });
-      const player = await tx.player.create({ data: { name: d.playerName } });
+      const player = await tx.player.create({ data: { name: d.playerName, imageUrl: d.imageUrl || null } });
       const result = await tx.playerAssignment.create({
         data: { playerId: player.id, teamCode: d.teamCode, designation: d.designation },
       });

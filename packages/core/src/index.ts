@@ -152,7 +152,7 @@ export type NflTeamView = {
   code: string;
   city: string;
   name: string;
-  assignments: { player: { name: string } }[];
+  assignments: { player: { name: string; imageUrl?: string | null } }[];
 };
 export class ApiClient {
   constructor(

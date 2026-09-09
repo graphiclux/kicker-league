@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -414,8 +415,8 @@ export default function Mobile() {
         )}
         {screen === 'nfl' && (
           <View>
-            <Text style={s.eyebrow}>THE WHOLE FIELD</Text>
-            <Text style={s.heading}>NFL kicking</Text>
+            <Text style={s.label}>THE WHOLE FIELD</Text>
+            <Text style={s.title}>NFL kicking</Text>
             <Text style={s.sub}>Real kicker names, headshots, and franchise scoring.</Text>
             {nfl.data?.map((t) => <View style={s.card} key={t.code}>
               {t.assignments[0]?.player.imageUrl && <Image source={{ uri: t.assignments[0].player.imageUrl }} style={s.kickerAvatar} />}
@@ -425,7 +426,7 @@ export default function Mobile() {
           </View>
         )}
         {screen === 'admin' && user?.role === 'SUPER_ADMIN' && (
-          <View><Text style={s.eyebrow}>SUPER ADMIN</Text><Text style={s.heading}>League office</Text><Text style={s.sub}>Scoring overrides, imports, kicker assignments, and audit history are available in the web admin console.</Text><Button title="Open web admin" onPress={() => setConnectionIssue('Open https://anditsnogood.ddev.site and choose Super Admin.')} /></View>
+          <View><Text style={s.label}>SUPER ADMIN</Text><Text style={s.title}>League office</Text><Text style={s.sub}>Scoring overrides, imports, kicker assignments, and audit history are available in the web admin console. Sign in there and choose Super Admin.</Text><Button title="Open web admin" onPress={() => run(() => Linking.openURL(base.replace(/\/api\/?$/, '/')))} /></View>
         )}
         {screen === 'leagues' && (
           <>

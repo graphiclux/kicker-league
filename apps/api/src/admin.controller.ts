@@ -188,8 +188,8 @@ export class AdminController {
     const rows = parseCsv(await response.text(), { columns: true, bom: true, skip_empty_lines: true }) as any[];
     let updated = 0;
     await db.$transaction(async (tx) => {
-      for (const row of rows.filter((r) => r.position === 'K' && r.nfl_id)) {
-        const result = await tx.player.updateMany({ where: { externalId: row.nfl_id }, data: { name: row.display_name || row.short_name, imageUrl: row.headshot || null } });
+      for (const row of rows.filter((r) => r.position === 'K' && (r.gsis_id || r.nfl_id))) {
+        const result = await tx.player.updateMany({ where: { OR: [{ externalId: row.gsis_id || row.nfl_id }, { name: row.short_name }, { name: row.display_name }] }, data: { name: row.display_name || row.short_name, externalId: row.gsis_id || row.nfl_id, imageUrl: row.headshot || null } });
         updated += result.count;
       }
       await audit(tx, req.user.id, 'PLAYER_DIRECTORY_SYNC', 'nflverse', 'Automatic player headshot refresh', undefined, { rows: rows.length, updated });

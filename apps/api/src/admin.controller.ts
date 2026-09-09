@@ -332,6 +332,34 @@ export class AdminController {
       return season;
     });
   }
+  @Post('scoring/:season') async updateScoring(
+    @Param('season') rawSeason: string,
+    @Body() body: unknown,
+    @Req() req: any,
+  ) {
+    const season = z.coerce.number().int().min(2000).max(2100).parse(rawSeason);
+    const d = z
+      .object({
+        reason: reasonSchema,
+        shortMiss: z.number().int().min(-100).max(100),
+        longMiss: z.number().int().min(-100).max(100),
+        xpMiss: z.number().int().min(-100).max(100),
+        xpBlocked: z.number().int().min(-100).max(100),
+        longMade: z.number().int().min(-100).max(100),
+        shortMax: z.number().int().min(1).max(100),
+        longMadeMin: z.number().int().min(1).max(100),
+      })
+      .parse(body);
+    const { reason, ...ruleData } = d;
+    return db.$transaction(async (tx) => {
+      const current = await tx.season.findUniqueOrThrow({ where: { year: season }, include: { rule: true } });
+      const updated = await tx.scoringRule.update({ where: { id: current.ruleId }, data: ruleData });
+      const weeks = await tx.week.findMany({ where: { season }, select: { week: true } });
+      for (const w of weeks) await recalculate(tx, season, w.week);
+      await audit(tx, req.user.id, 'SCORING_RULE_UPDATED', String(season), reason, current.rule, updated);
+      return { season, rule: updated, recalculatedWeeks: weeks.map((w) => w.week) };
+    });
+  }
   @Post('assignments') async assignment(@Body() body: any, @Req() req: any) {
     const d = z
       .object({

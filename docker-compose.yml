@@ -63,6 +63,12 @@ services:
     build: {context: ., dockerfile: infrastructure/docker.Dockerfile, target: worker}
     depends_on:
       api: {condition: service_healthy}
+  nfl-sync:
+    <<: *app
+    build: {context: ., dockerfile: infrastructure/docker.Dockerfile, target: worker}
+    command: [node, apps/api/dist/workers/nfl-sync/index.js]
+    depends_on:
+      api: {condition: service_healthy}
   web:
     <<: *app
     build: {context: ., dockerfile: infrastructure/docker.Dockerfile, target: web}

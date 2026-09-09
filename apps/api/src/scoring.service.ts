@@ -64,6 +64,12 @@ export async function processImport(id: string) {
           }
         for (const row of parsed.rows) {
           const e = row.event;
+          const existingPlayer = await tx.player.findFirst({ where: { name: e.kicker, assignments: { some: { teamCode: e.teamCode, endsAt: null } } } });
+          if (!existingPlayer) {
+            const player = await tx.player.create({ data: { name: e.kicker } });
+            const hasPrimary = await tx.playerAssignment.findFirst({ where: { teamCode: e.teamCode, designation: 'PRIMARY_KICKER', endsAt: null } });
+            await tx.playerAssignment.create({ data: { playerId: player.id, teamCode: e.teamCode, designation: hasPrimary ? 'BACKUP_KICKER' : 'PRIMARY_KICKER' } });
+          }
           const key = { provider: batch.provider, providerEventId: e.providerEventId };
           const old = await tx.kickingEvent.findUnique({
             where: { provider_providerEventId: key },

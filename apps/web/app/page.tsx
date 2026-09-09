@@ -56,6 +56,7 @@ function App() {
     [boot, setBoot] = useState(true),
     [screen, setScreen] = useState('overview'),
     [leagueId, setLeagueId] = useState(''),
+    [seasonOverride, setSeasonOverride] = useState<number | null>(null),
     [week, setWeek] = useState(1),
     [notice, setNotice] = useState(''),
     [error, setError] = useState(''),
@@ -81,7 +82,7 @@ function App() {
     queryFn: () => api.request('/nfl-teams'),
   });
   const league = leagues.data?.find((l) => l.id === leagueId) || leagues.data?.[0];
-  const season = league?.season || seasons.data?.[0]?.year || 2026;
+  const season = seasonOverride || league?.season || seasons.data?.[0]?.year || 2026;
   const standings = useQuery<FantasyTeamView[]>({
     queryKey: ['standings', league?.id, week],
     queryFn: () => api.request(`/leagues/${league!.id}/standings?week=${week}`),
@@ -427,7 +428,9 @@ function App() {
             THE LEAGUE OFFICE <span>/</span> {nav.find((n) => n[0] === screen)?.[1]}
           </div>
           <div className="top-controls">
-            <span className="season-label">{season} SEASON</span>
+            <select aria-label="Selected season" value={season} onChange={(e) => setSeasonOverride(Number(e.target.value))}>
+              {seasons.data?.map((s) => <option value={s.year} key={s.year}>{s.year} Season</option>)}
+            </select>
             <select
               aria-label="Selected league"
               value={league?.id || ''}

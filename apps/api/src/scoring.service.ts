@@ -41,11 +41,31 @@ export async function processImport(id: string) {
         if (batch.status === 'COMPLETED') return;
         if (batch.status !== 'QUEUED') throw new Error('Import is not queued');
         const parsed = batch.rows as unknown as ParsedImport;
+        if (parsed.errors.length) throw new Error('Import contains validation errors');
         const weeks = [...new Set(parsed.scopes.map((s) => `${s.season}:${s.week}`))].sort();
         const rules = new Map<number, any>();
         for (const w of weeks) {
           const [season, week] = w.split(':').map(Number);
           rules.set(season, (await lockWeek(tx, season, week)).rule);
+        }
+        if (batch.provider === 'espn') {
+          for (const scope of parsed.scopes) {
+            if (await tx.kickingEvent.findFirst({ where: { ...scope, provider: { not: 'espn' }, voidedAt: null } }))
+              throw new Error('ESPN scope already contains another provider; reconcile it before importing to avoid double scoring');
+          }
+        }
+        if (batch.provider === 'espn') {
+          for (const gameId of [...new Set(parsed.rows.map(r => r.event.gameId).filter((id): id is string => !!id))]) {
+            const removed = await tx.kickingEvent.findMany({ where: {
+              provider: 'espn', gameId, voidedAt: null,
+              providerEventId: { notIn: parsed.rows.map(r => r.event.providerEventId) },
+            } });
+            for (const old of removed) {
+              if (await tx.auditLog.findFirst({ where: { entityId: old.id, action: { in: ['EVENT_CORRECTED', 'EVENT_VOIDED'] } } })) continue;
+              await tx.kickingEvent.update({ where: { id: old.id }, data: { voidedAt: new Date() } });
+              await audit(tx, 'SYSTEM', 'PROVIDER_EVENT_REMOVED', old.id, batch.reason, old, { voided: true });
+            }
+          }
         }
         const snapshot =
           batch.mode === 'SUMMARY' ||
@@ -64,12 +84,17 @@ export async function processImport(id: string) {
           }
         for (const row of parsed.rows) {
           const e = row.event;
-          const existingPlayer = await tx.player.findFirst({ where: { name: e.kicker, assignments: { some: { teamCode: e.teamCode, endsAt: null } } } });
-          const providerId = typeof (row.raw as any).kicker_player_id === 'string' ? (row.raw as any).kicker_player_id : null;
+          const providerId = row.raw.espn_player_id ? `espn:${row.raw.espn_player_id}` : row.raw.kicker_player_id || null;
+          const existingPlayer = await tx.player.findFirst({ where: { OR: [
+            ...(providerId ? [{ externalId: providerId }] : []), { name: e.kicker },
+          ] } });
           if (existingPlayer && providerId && !existingPlayer.externalId)
             await tx.player.update({ where: { id: existingPlayer.id }, data: { externalId: providerId } });
-          if (!existingPlayer) {
-            const player = await tx.player.create({ data: { name: e.kicker, externalId: providerId || undefined } });
+          const imageUrl = /^https:\/\/a\.espncdn\.com\/i\/headshots\//.test(row.raw.imageUrl || '') ? row.raw.imageUrl : undefined;
+          const player = existingPlayer
+            ? await tx.player.update({ where: { id: existingPlayer.id }, data: { imageUrl } })
+            : await tx.player.create({ data: { name: e.kicker, externalId: providerId || undefined, imageUrl } });
+          if (!await tx.playerAssignment.findFirst({ where: { playerId: player.id, teamCode: e.teamCode, endsAt: null } })) {
             const hasPrimary = await tx.playerAssignment.findFirst({ where: { teamCode: e.teamCode, designation: 'PRIMARY_KICKER', endsAt: null } });
             await tx.playerAssignment.create({ data: { playerId: player.id, teamCode: e.teamCode, designation: hasPrimary ? 'BACKUP_KICKER' : 'PRIMARY_KICKER' } });
           }
@@ -77,6 +102,10 @@ export async function processImport(id: string) {
           const old = await tx.kickingEvent.findUnique({
             where: { provider_providerEventId: key },
           });
+          // An operator correction/void wins over subsequent automated refreshes.
+          if (batch.provider === 'espn' && old && await tx.auditLog.findFirst({
+            where: { entityId: old.id, action: { in: ['EVENT_CORRECTED', 'EVENT_VOIDED', 'EVENT_REPLACED'] } },
+          })) continue;
           if (
             old &&
             (old.season !== e.season || old.week !== e.week || old.teamCode !== e.teamCode)

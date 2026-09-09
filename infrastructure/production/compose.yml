@@ -70,6 +70,22 @@ services:
       timeout: 5s
       retries: 3
     mem_limit: 768m
+  nfl-sync:
+    <<: *runtime
+    image: ${AING_WORKER_IMAGE:-aing-worker:latest}
+    command: [node, apps/api/dist/workers/nfl-sync/espn.js]
+    environment:
+      NODE_ENV: production
+      NFL_AUTO_SYNC_INTERVAL_MINUTES: '10'
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "process.exit(Date.now()-Number(require('fs').readFileSync('/tmp/aing-espn-heartbeat','utf8'))<1500000?0:1)"]
+      interval: 60s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
+    mem_limit: 512m
   web:
     <<: *runtime
     image: ${AING_WEB_IMAGE:-aing-web:latest}

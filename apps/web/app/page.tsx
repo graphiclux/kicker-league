@@ -1361,7 +1361,8 @@ function Admin({
     [mode, setMode] = useState('EVENT'),
     [reason, setReason] = useState(''),
     [preview, setPreview] = useState<any>(null),
-    [team, setTeam] = useState('BUF');
+    [team, setTeam] = useState('BUF'),
+    [rule, setRule] = useState({ ...defaultRules });
   const imports = useQuery<any[]>({
     queryKey: ['imports'],
     queryFn: () => api.request('/admin/imports'),
@@ -1851,6 +1852,25 @@ function Admin({
               <button disabled={busy || reason.length < 5}>
                 Create season with standard rules
               </button>
+            </form>
+            <h3>Override scoring · {season}</h3>
+            <p>Use this only when an official correction requires recalculating existing scores.</p>
+            <form
+              className="scoring-editor"
+              onSubmit={(e) => {
+                e.preventDefault();
+                run(
+                  async () => api.post(`/admin/scoring/${season}`, { ...rule, reason }),
+                  `Scoring updated for ${season}`,
+                );
+              }}
+            >
+              {(['shortMiss', 'longMiss', 'xpMiss', 'xpBlocked', 'longMade', 'shortMax', 'longMadeMin'] as const).map((key) => (
+                <Field key={key} label={key}>
+                  <input type="number" value={rule[key]} onChange={(e) => setRule({ ...rule, [key]: Number(e.target.value) })} />
+                </Field>
+              ))}
+              <button disabled={busy || reason.trim().length < 5}>Save and recalculate</button>
             </form>
             <h3>nflverse sync</h3>
             <p>

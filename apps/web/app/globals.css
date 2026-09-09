@@ -71,6 +71,8 @@ textarea {
 .profile-panel h3 { margin: 7px 0 0; }
 .team-name-form { max-width: 520px; display: flex; align-items: end; gap: 14px; }
 .team-name-form .field { flex: 1; margin-bottom: 0; }
+.scoring-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.scoring-editor button { grid-column: 1 / -1; justify-self: start; }
 select {
   width: auto;
   max-width: 100%;

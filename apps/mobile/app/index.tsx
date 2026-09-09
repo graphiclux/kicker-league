@@ -29,12 +29,14 @@ const base = process.env.EXPO_PUBLIC_API_URL || 'https://anditsnogood.ddev.site/
 let access: string | null = null;
 const api = new ApiClient(base, () => access);
 const pts = (n: number) => (n > 0 ? `+${n}` : String(n));
-const destinations = ['clubhouse', 'draft', 'standings', 'inbox'];
+const destinations = ['clubhouse', 'draft', 'standings', 'nfl', 'inbox'];
 const tabIcons: Record<string, any> = {
   clubhouse: require('../assets/tab-clubhouse.png'),
   draft: require('../assets/tab-draft.png'),
   standings: require('../assets/tab-standings.png'),
   inbox: require('../assets/tab-inbox.png'),
+  nfl: require('../assets/tab-clubhouse.png'),
+  admin: require('../assets/tab-inbox.png'),
 };
 function SelectionMenu({ label, value, options, onSelect }: {
   label: string;
@@ -410,6 +412,21 @@ export default function Mobile() {
             <Pressable accessibilityRole="button" onPress={() => setScreen('standings')} style={s.standingsLink}><Text style={s.text}>See the full standings</Text><Text style={s.menuIcon}>→</Text></Pressable>
           </>
         )}
+        {screen === 'nfl' && (
+          <View>
+            <Text style={s.eyebrow}>THE WHOLE FIELD</Text>
+            <Text style={s.heading}>NFL kicking</Text>
+            <Text style={s.sub}>Real kicker names, headshots, and franchise scoring.</Text>
+            {nfl.data?.map((t) => <View style={s.card} key={t.code}>
+              {t.assignments[0]?.player.imageUrl && <Image source={{ uri: t.assignments[0].player.imageUrl }} style={s.kickerAvatar} />}
+              <Text style={s.title}>{t.code} · {t.city} {t.name}</Text>
+              <Text style={s.sub}>{t.assignments[0]?.player.name || 'Kicker to be confirmed'}</Text>
+            </View>)}
+          </View>
+        )}
+        {screen === 'admin' && user?.role === 'SUPER_ADMIN' && (
+          <View><Text style={s.eyebrow}>SUPER ADMIN</Text><Text style={s.heading}>League office</Text><Text style={s.sub}>Scoring overrides, imports, kicker assignments, and audit history are available in the web admin console.</Text><Button title="Open web admin" onPress={() => setConnectionIssue('Open https://anditsnogood.ddev.site and choose Super Admin.')} /></View>
+        )}
         {screen === 'leagues' && (
           <>
             <Text style={s.title}>Create a league</Text>
@@ -662,7 +679,7 @@ export default function Mobile() {
         />}
       </ScrollView>
       <View style={s.bottomNav}>
-        {destinations.map((id) => (
+        {[...destinations, ...(user?.role === 'SUPER_ADMIN' ? ['admin'] : [])].map((id) => (
           <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: screen === id }} accessibilityLabel={id[0].toUpperCase() + id.slice(1)} onPress={() => setScreen(id)} style={s.bottomTab}>
             <Image source={tabIcons[id]} style={[s.tabIcon, { tintColor: screen === id ? '#F5C451' : '#858D99' }]} />
             <Text style={[s.tabLabel, screen === id && { color: '#F5C451' }]}>{id[0].toUpperCase() + id.slice(1)}</Text>

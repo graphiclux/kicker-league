@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { gunzipSync } from 'node:zlib';
+import { parse as parseCsv } from 'csv-parse/sync';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { z } from 'zod';
 import { db, audit, json, lockWeek, outbox } from './db';
@@ -140,7 +141,8 @@ export class AdminController {
       configured.replace('{season}', String(season)).replace('{week}', String(week)),
     );
     if (url.protocol !== 'https:') throw new Error('nflverse URL must use HTTPS');
-    const r = await fetch(url, { signal: AbortSignal.timeout(60000), redirect: 'error' });
+    const r = await fetch(url, { signal: AbortSignal.timeout(60000), redirect: 'follow' });
+    if (new URL(r.url).protocol !== 'https:') throw new Error('Provider redirect must use HTTPS');
     if (!r.ok) throw new Error(`Provider returned ${r.status}`);
     if (Number(r.headers.get('content-length')) > 100_000_000)
       throw new Error('Provider file exceeds 100 MB');
@@ -175,6 +177,24 @@ export class AdminController {
       },
       req.user.id,
     );
+  }
+  @Post('nflverse/players/sync') async syncPlayers(@Req() req: any) {
+    const configured = process.env.NFLVERSE_PLAYERS_URL;
+    if (!configured) throw new Error('NFLVERSE_PLAYERS_URL is not configured');
+    const url = new URL(configured);
+    if (url.protocol !== 'https:') throw new Error('Player provider URL must use HTTPS');
+    const response = await fetch(url, { signal: AbortSignal.timeout(60000), redirect: 'follow' });
+    if (!response.ok) throw new Error(`Provider returned ${response.status}`);
+    const rows = parseCsv(await response.text(), { columns: true, bom: true, skip_empty_lines: true }) as any[];
+    let updated = 0;
+    await db.$transaction(async (tx) => {
+      for (const row of rows.filter((r) => r.position === 'K' && r.nfl_id)) {
+        const result = await tx.player.updateMany({ where: { externalId: row.nfl_id }, data: { name: row.display_name || row.short_name, imageUrl: row.headshot || null } });
+        updated += result.count;
+      }
+      await audit(tx, req.user.id, 'PLAYER_DIRECTORY_SYNC', 'nflverse', 'Automatic player headshot refresh', undefined, { rows: rows.length, updated });
+    });
+    return { source: 'nflverse', rows: rows.length, updated };
   }
   @Post('events') async addEvent(@Body() body: any, @Req() req: any) {
     const e = eventSchema.parse(body.event),

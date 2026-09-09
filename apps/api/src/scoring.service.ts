@@ -65,8 +65,11 @@ export async function processImport(id: string) {
         for (const row of parsed.rows) {
           const e = row.event;
           const existingPlayer = await tx.player.findFirst({ where: { name: e.kicker, assignments: { some: { teamCode: e.teamCode, endsAt: null } } } });
+          const providerId = typeof (row.raw as any).kicker_player_id === 'string' ? (row.raw as any).kicker_player_id : null;
+          if (existingPlayer && providerId && !existingPlayer.externalId)
+            await tx.player.update({ where: { id: existingPlayer.id }, data: { externalId: providerId } });
           if (!existingPlayer) {
-            const player = await tx.player.create({ data: { name: e.kicker } });
+            const player = await tx.player.create({ data: { name: e.kicker, externalId: providerId || undefined } });
             const hasPrimary = await tx.playerAssignment.findFirst({ where: { teamCode: e.teamCode, designation: 'PRIMARY_KICKER', endsAt: null } });
             await tx.playerAssignment.create({ data: { playerId: player.id, teamCode: e.teamCode, designation: hasPrimary ? 'BACKUP_KICKER' : 'PRIMARY_KICKER' } });
           }

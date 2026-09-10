@@ -424,6 +424,9 @@ function App() {
       </aside>
       <main className="workspace">
         <header className="topbar">
+          <div className="mobile-brand" aria-label="And It’s No Good">
+            <Brand />
+          </div>
           <div className="breadcrumb">
             THE LEAGUE OFFICE <span>/</span> {nav.find((n) => n[0] === screen)?.[1]}
           </div>
@@ -718,6 +721,22 @@ function App() {
         <footer>
           AND IT’S NO GOOD <span>One position. All season. Every miss.</span>
         </footer>
+        <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+          {nav.map(([key, title, Icon]) => (
+            <button
+              key={key}
+              className={screen === key ? 'active' : ''}
+              onClick={() => {
+                setScreen(key);
+                setError('');
+                setNotice('');
+              }}
+            >
+              <Icon size={18} />
+              <span>{title === 'Draft room' ? 'Draft' : title === 'NFL kicking' ? 'NFL' : title === 'My leagues' ? 'Leagues' : title}</span>
+            </button>
+          ))}
+        </nav>
       </main>
     </div>
   );

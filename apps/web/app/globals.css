@@ -1361,3 +1361,232 @@ pre {
     margin: 4px 0 0;
   }
 }
+
+/* The narrow web view follows the mobile product language while the desktop shell stays intact. */
+.mobile-brand,
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  body {
+    background: #101318;
+    padding-bottom: 78px;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: block;
+    padding: 13px 16px 12px;
+    background: rgba(26, 31, 39, 0.96);
+    backdrop-filter: blur(14px);
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    margin-bottom: 10px;
+  }
+
+  .mobile-brand .brand {
+    gap: 8px;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .mobile-brand .brand strong {
+    font-size: 15px;
+  }
+
+  .mobile-brand .brand-icon {
+    width: 31px;
+    height: 31px;
+    border-radius: 7px;
+  }
+
+  .breadcrumb {
+    display: none;
+  }
+
+  .top-controls {
+    display: grid;
+    grid-template-columns: 1fr 1.35fr 0.82fr;
+    gap: 7px;
+    width: 100%;
+    margin: 0;
+  }
+
+  .top-controls select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    padding: 9px 8px;
+    border-radius: 8px;
+    background: #242a33;
+    border-color: #353d49;
+    color: #f2f4f7;
+    font-size: 12px;
+  }
+
+  .content {
+    padding: 24px 16px 28px;
+  }
+
+  .page-heading {
+    margin: 2px 0 20px;
+    gap: 10px;
+  }
+
+  .page-heading .eyebrow {
+    margin-bottom: 8px;
+    color: #a7afbb;
+    font-size: 10px;
+  }
+
+  .page-heading h1 {
+    font-size: 32px;
+    letter-spacing: -1.4px;
+  }
+
+  .page-heading p {
+    font-size: 13px;
+  }
+
+  .page-heading > button {
+    width: 100%;
+  }
+
+  .dashboard-grid,
+  .two-col,
+  .draft-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .team-hero {
+    border-radius: 16px;
+    padding: 21px;
+  }
+
+  .team-hero h2 {
+    margin: 19px 0 17px;
+    font-size: 28px;
+  }
+
+  .hero-scores {
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .hero-scores strong {
+    font-size: 48px;
+  }
+
+  .hero-scores div + div strong {
+    font-size: 39px;
+  }
+
+  .hero-foot {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+    margin-top: 19px;
+    padding-top: 15px;
+  }
+
+  .panel {
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  .roster-panel .franchise-big {
+    color: #3b4552;
+  }
+
+  .nfl-grid {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .nfl-card {
+    min-height: 72px;
+    align-items: center;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .nfl-card .kicker-avatar {
+    width: 31px;
+    height: 31px;
+    margin: 4px 0 0;
+  }
+
+  .event-feed {
+    margin-top: 14px;
+  }
+
+  .event-row {
+    gap: 11px;
+    padding: 14px 0;
+  }
+
+  .event-points {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 30;
+    display: flex;
+    overflow-x: auto;
+    gap: 3px;
+    padding: 7px;
+    border: 1px solid #353d49;
+    border-radius: 16px;
+    background: rgba(26, 31, 39, 0.97);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(16px);
+  }
+
+  .mobile-bottom-nav button {
+    flex: 0 0 68px;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 3px 7px;
+    border-radius: 10px;
+    background: transparent;
+    color: #a7afbb;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .mobile-bottom-nav button.active {
+    background: #f5c451;
+    color: #101318;
+  }
+
+  .mobile-bottom-nav button:hover:not(:disabled) {
+    transform: none;
+    filter: none;
+  }
+
+  footer {
+    display: none;
+  }
+}

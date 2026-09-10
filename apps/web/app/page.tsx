@@ -60,6 +60,7 @@ function App() {
     [week, setWeek] = useState(1),
     [notice, setNotice] = useState(''),
     [error, setError] = useState(''),
+    [mobileMoreOpen, setMobileMoreOpen] = useState(false),
     [busy, setBusy] = useState(false);
   const [teamNameEdit, setTeamNameEdit] = useState('');
   const [authMode, setAuthMode] = useState('login'),
@@ -558,6 +559,21 @@ function App() {
                     <h3>Your kicking position</h3>
                     <Target size={20} />
                   </div>
+                  <div className="kicker-identity">
+                    {nfl.data?.find((t) => t.code === myTeam?.roster?.teamCode)?.assignments[0]?.player.imageUrl ? (
+                      <img
+                        className="clubhouse-kicker-avatar"
+                        src={nfl.data.find((t) => t.code === myTeam?.roster?.teamCode)!.assignments[0].player.imageUrl!}
+                        alt=""
+                      />
+                    ) : (
+                      <div className="clubhouse-kicker-placeholder">{myTeam?.roster?.teamCode || 'K'}</div>
+                    )}
+                    <div>
+                      <strong>{nfl.data?.find((t) => t.code === myTeam?.roster?.teamCode)?.assignments[0]?.player.name || 'Kicker to be confirmed'}</strong>
+                      <small>Current kicker · backups included</small>
+                    </div>
+                  </div>
                   <div className="franchise-big">{myTeam?.roster?.teamCode || '—'}</div>
                   <h2>
                     {nfl.data
@@ -721,8 +737,16 @@ function App() {
         <footer>
           AND IT’S NO GOOD <span>One position. All season. Every miss.</span>
         </footer>
+        {mobileMoreOpen && (
+          <div className="mobile-more-sheet" role="dialog" aria-label="More navigation">
+            <div className="mobile-more-heading"><strong>League office</strong><button className="text-button" onClick={() => setMobileMoreOpen(false)}>Close</button></div>
+            {nav.filter(([key]) => !['overview', 'nfl', 'standings'].includes(key)).map(([key, title, Icon]) => (
+              <button key={key} onClick={() => { setScreen(key); setMobileMoreOpen(false); }}><Icon size={18} />{title}</button>
+            ))}
+          </div>
+        )}
         <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-          {nav.map(([key, title, Icon]) => (
+          {nav.filter(([key]) => ['overview', 'nfl', 'standings'].includes(key)).map(([key, title, Icon]) => (
             <button
               key={key}
               className={screen === key ? 'active' : ''}
@@ -736,6 +760,7 @@ function App() {
               <span>{title === 'Draft room' ? 'Draft' : title === 'NFL kicking' ? 'NFL' : title === 'My leagues' ? 'Leagues' : title}</span>
             </button>
           ))}
+          <button className={mobileMoreOpen ? 'active' : ''} onClick={() => setMobileMoreOpen((open) => !open)}><Menu size={18} /><span>More</span></button>
         </nav>
       </main>
     </div>

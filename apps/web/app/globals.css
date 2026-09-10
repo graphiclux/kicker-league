@@ -74,6 +74,11 @@ textarea {
 .scoring-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .scoring-editor button { grid-column: 1 / -1; justify-self: start; }
 .kicker-avatar { width: 42px; height: 42px; object-fit: cover; border-radius: 50%; margin: 10px 0 4px; border: 2px solid var(--lime); }
+.kicker-identity { display: flex; align-items: center; gap: 12px; margin: 8px 0 12px; }
+.clubhouse-kicker-avatar, .clubhouse-kicker-placeholder { width: 56px; height: 66px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); flex: 0 0 auto; }
+.clubhouse-kicker-placeholder { display: grid; place-items: center; background: #242a33; color: var(--lime); font-size: 18px; font-weight: 800; }
+.kicker-identity strong { display: block; font-size: 15px; }
+.kicker-identity small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
 select {
   width: auto;
   max-width: 100%;
@@ -1585,6 +1590,26 @@ pre {
     transform: none;
     filter: none;
   }
+
+  .mobile-more-sheet {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 84px;
+    z-index: 29;
+    padding: 14px;
+    border: 1px solid #353d49;
+    border-radius: 14px;
+    background: #1a1f27;
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  }
+
+  .mobile-more-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: #f2f4f7; }
+  .mobile-more-sheet > button { width: 100%; justify-content: flex-start; background: transparent; color: #f2f4f7; padding: 12px 8px; border-top: 1px solid #2a3039; border-radius: 0; }
+  .mobile-more-sheet > button svg { color: #f5c451; }
+
+  .kicker-identity { margin-top: 4px; }
+  .clubhouse-kicker-avatar, .clubhouse-kicker-placeholder { width: 52px; height: 62px; }
 
   footer {
     display: none;

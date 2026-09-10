@@ -315,6 +315,11 @@ export default function Mobile() {
               })
             }
           />
+          <View style={{flexDirection:'row', justifyContent:'center', gap:10, marginTop:14}}>
+            <Pressable onPress={() => Linking.openURL('https://aing.hostsites.me/privacy')}><Text style={s.sub}>Privacy Policy</Text></Pressable>
+            <Text style={s.sub}>·</Text>
+            <Pressable onPress={() => Linking.openURL('https://aing.hostsites.me/terms')}><Text style={s.sub}>Terms of Service</Text></Pressable>
+          </View>
           <Button
             title={register ? 'Already have an account? Sign in' : 'Create an account'}
             secondary
@@ -435,7 +440,7 @@ export default function Mobile() {
             {nflFilter !== 'all' && !feedStatus.data?.games.some((g: any) => g.state === nflFilter) && <Text style={s.sub}>No {nflFilter === 'in' ? 'live' : 'recent final'} games reported for this week.</Text>}
           </View>
         )}
-        {screen === 'more' && <View><Text style={s.hero}>The league office.</Text><Text style={s.sub}>One position. All season. Every miss.</Text>{[['leagues','Create or join a league'],['draft','Draft room'],['rules','Scoring rules'],['inbox','Account & notifications'], ...(user.role === 'SUPER_ADMIN' ? [['admin','Super Admin']] : [])].map(([id,label]) => <Pressable key={id} accessibilityRole="button" style={s.line} onPress={() => setScreen(id)}><Text style={s.text}>{label}</Text><Text style={s.menuIcon}>→</Text></Pressable>)}</View>}
+        {screen === 'more' && <View><Text style={s.hero}>The league office.</Text><Text style={s.sub}>One position. All season. Every miss.</Text>{[['leagues','Create or join a league'],['draft','Draft room'],['rules','Scoring rules'],['inbox','Account & notifications'], ...(user.role === 'SUPER_ADMIN' ? [['admin','Super Admin']] : [])].map(([id,label]) => <Pressable key={id} accessibilityRole="button" style={s.line} onPress={() => setScreen(id)}><Text style={s.text}>{label}</Text><Text style={s.menuIcon}>→</Text></Pressable>)}<Text style={[s.label,{marginTop:22}]}>LEGAL</Text><Pressable style={s.line} onPress={() => Linking.openURL('https://aing.hostsites.me/privacy')}><Text style={s.text}>Privacy Policy</Text><Text style={s.menuIcon}>↗</Text></Pressable><Pressable style={s.line} onPress={() => Linking.openURL('https://aing.hostsites.me/terms')}><Text style={s.text}>Terms of Service</Text><Text style={s.menuIcon}>↗</Text></Pressable></View>}
         {screen === 'rules' && <View><Text style={s.hero}>Cheer for the miss.</Text><Text style={s.sub}>Global scoring rules · {season}</Text>{(() => {const r = seasons.data?.find(v => v.year === season)?.rule; return r ? [[`Missed FG up to ${r.shortMax} yards`, r.shortMiss], [`Missed FG over ${r.shortMax} yards`, r.longMiss], ['Missed extra point',r.xpMiss], ['Blocked extra point',r.xpBlocked], [`Made FG from ${r.longMadeMin} yards`,r.longMade], ['Other made kicks',0]].map(([label,value]) => <View key={String(label)} style={s.line}><Text style={[s.text,{flex:1}]}>{label}</Text><Text style={s.points}>{pts(Number(value))}</Text></View>) : <Text style={s.sub}>Loading scoring rules…</Text>;})()}<Text style={s.sub}>Your franchise includes replacement kickers. No trades or lineup changes after the draft.</Text></View>}
         {screen === 'admin' && user?.role === 'SUPER_ADMIN' && (
           <View><Text style={s.label}>SUPER ADMIN</Text><Text style={s.title}>League office</Text><Text style={s.sub}>Scoring overrides, imports, kicker assignments, and audit history are available in the web admin console. Sign in there and choose Super Admin.</Text><Button title="Open web admin" onPress={() => run(() => Linking.openURL(base.replace(/\/api\/?$/, '/')))} /></View>

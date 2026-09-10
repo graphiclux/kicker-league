@@ -168,16 +168,46 @@ async function tick() {
   }
 }
 let clocksRunning = false;
+let lastReminderCheck = 0;
 async function clocks() {
   if (clocksRunning) return;
   clocksRunning = true;
   try {
     await runDraftClocks();
+    await sendDraftReminders();
     await connection.set('aing:worker:heartbeat', String(Date.now()), 'EX', 20);
   } catch (e) {
     console.error('Draft clock failed', e);
   } finally {
     clocksRunning = false;
+  }
+}
+async function sendDraftReminders() {
+  const now = Date.now();
+  if (now - lastReminderCheck < 60_000) return;
+  lastReminderCheck = now;
+  const leagues = await db.league.findMany({
+    where: { status: 'LOBBY', scheduledAt: { gt: new Date(now), lte: new Date(now + 24 * 60 * 60 * 1000) } },
+    include: { teams: { include: { owner: true } } },
+  });
+  for (const league of leagues) {
+    const remaining = league.scheduledAt!.getTime() - now;
+    const threshold = remaining <= 15 * 60 * 1000 ? '15m' : '24h';
+    const key = `aing:mail:draft-reminder:${league.id}:${threshold}`;
+    if ((await connection.set(key, '1', 'EX', 3 * 24 * 60 * 60, 'NX')) !== 'OK') continue;
+    for (const team of league.teams) await db.outbox.create({
+      data: {
+        topic: 'mail.send',
+        payload: json({
+          to: team.owner.email,
+          subject: `${league.name} draft starts ${threshold === '15m' ? 'in 15 minutes' : 'tomorrow'}`,
+          eyebrow: 'DRAFT REMINDER',
+          title: threshold === '15m' ? 'The clock is almost ticking.' : 'Your draft is on the horizon.',
+          copy: `The ${league.name} draft is scheduled for ${league.scheduledAt!.toLocaleString()}. Set your rankings, pick your poison, and be ready.`,
+          url: `${process.env.WEB_URL}/`, button: 'Open the draft room',
+        }),
+      },
+    });
   }
 }
 const clockTimer = setInterval(clocks, 1000);

@@ -51,7 +51,16 @@ export class AuthController {
     const u = await db.user.findUnique({ where: { email: data.email } });
     if (!u || u.suspended || !(await argon2.verify(u.passwordHash, data.password)))
       throw new UnauthorizedException('Invalid email or password');
-    return newSession(u, res);
+    const session = await newSession(u, res);
+    void sendProductMail({
+      to: u.email,
+      subject: 'New sign-in to And It’s No Good',
+      eyebrow: 'ACCOUNT SECURITY',
+      title: 'Someone just entered the clubhouse.',
+      copy: 'Your account was signed in successfully. If that was you, carry on. If it was not, reset your password immediately.',
+      url: `${process.env.WEB_URL}/?action=forgot`, button: 'Review my account',
+    }).catch((error) => console.error('Sign-in email failed:', error));
+    return session;
   }
   @Post('refresh') async refresh(
     @Body() body: any,

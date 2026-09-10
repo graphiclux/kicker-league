@@ -67,11 +67,12 @@ async function main() {
   app.use(async (req: any, res: any, next: any) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       const origin = req.headers.origin;
+      const nativeClient = req.headers['x-aing-client'] === 'mobile';
       if (origin && !origins.includes(origin))
         return res.status(403).json({ message: 'Origin not allowed' });
       if (req.headers['sec-fetch-site'] === 'cross-site')
         return res.status(403).json({ message: 'Cross-site request rejected' });
-      if (req.cookies?.aing_access && !req.headers.authorization && !origin)
+      if (req.cookies?.aing_access && !req.headers.authorization && !origin && !nativeClient)
         return res
           .status(403)
           .json({ message: 'Origin required for cookie-authenticated requests' });

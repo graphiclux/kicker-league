@@ -158,6 +158,7 @@ export class ApiClient {
   constructor(
     public baseUrl: string,
     private access: () => string | null = () => null,
+    private defaultHeaders: Record<string, string> = {},
   ) {}
   async request<T = any>(path: string, options: RequestInit = {}): Promise<T> {
     const token = this.access();
@@ -166,6 +167,7 @@ export class ApiClient {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        ...this.defaultHeaders,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },

@@ -28,7 +28,7 @@ import {
 } from '../../../packages/core/src';
 const base = process.env.EXPO_PUBLIC_API_URL || 'https://anditsnogood.ddev.site/api';
 let access: string | null = null;
-const api = new ApiClient(base, () => access);
+const api = new ApiClient(base, () => access, { 'X-AING-Client': 'mobile' });
 const pts = (n: number) => (n > 0 ? `+${n}` : String(n));
 const destinations = ['clubhouse', 'nfl', 'standings', 'more'];
 const tabIcons: Record<string, any> = {

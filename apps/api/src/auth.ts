@@ -92,6 +92,9 @@ export class AdminGuard implements CanActivate {
     return true;
   }
 }
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+
 export async function sendAuthMail(user: any, purpose: 'VERIFY' | 'RESET') {
   const raw = token();
   await db.authToken.create({
@@ -109,7 +112,15 @@ export async function sendAuthMail(user: any, purpose: 'VERIFY' | 'RESET') {
   const subject = purpose === 'VERIFY'
     ? "Verify your And It's No Good account"
     : "Reset your And It's No Good password";
-  const text = `${purpose === 'VERIFY' ? 'Verify your email' : 'Reset your password'}: ${url}\nThis link expires in one hour.`;
+  const isVerify = purpose === 'VERIFY';
+  const greeting = user.displayName ? `Hey ${escapeHtml(user.displayName)},` : 'Hey there,';
+  const title = isVerify ? 'One tiny step before the misses begin.' : 'A fresh start for your bad ideas.';
+  const copy = isVerify
+    ? 'Confirm your email and you’re cleared to draft one glorious kicking position.'
+    : 'Use the button below to choose a new password and get back to the wrong side of the uprights.';
+  const button = isVerify ? 'Verify my email' : 'Reset my password';
+  const text = `${isVerify ? 'Verify your email' : 'Reset your password'}: ${url}\nThis link expires in one hour.\n\nAnd It’s No Good. — Fantasy football. Questionable footwork.`;
+  const html = `<!doctype html><html><body style="margin:0;background:#101318;color:#f2f4f7;font-family:Arial,Helvetica,sans-serif"><div style="display:none;max-height:0;overflow:hidden">${escapeHtml(title)}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#101318;padding:32px 14px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#1a1f27;border:1px solid #2a3039;border-radius:18px;overflow:hidden"><tr><td style="padding:28px 30px 20px;border-bottom:1px solid #2a3039"><span style="display:inline-block;background:#f5c451;color:#101318;border-radius:9px;padding:10px 12px;font-size:20px;font-weight:900;transform:rotate(-4deg)">⚑</span><span style="display:inline-block;margin-left:12px;vertical-align:top;padding-top:4px;color:#f2f4f7;font-size:13px;font-weight:800;letter-spacing:.6px;line-height:1.15">AND IT’S<br><span style="font-size:20px;letter-spacing:-.7px">NO GOOD.</span></span></td></tr><tr><td style="padding:34px 30px 28px"><div style="color:#f5c451;font-size:11px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;margin-bottom:14px">${isVerify ? 'WELCOME TO THE WRONG SIDE' : 'THE UPRIGHTS HAVE SPOKEN'}</div><h1 style="margin:0 0 18px;color:#f2f4f7;font-size:30px;line-height:1.15;letter-spacing:-.8px">${escapeHtml(title)}</h1><p style="margin:0 0 10px;color:#f2f4f7;font-size:16px;line-height:1.5">${greeting}</p><p style="margin:0 0 26px;color:#a7afbb;font-size:15px;line-height:1.6">${escapeHtml(copy)}</p><a href="${escapeHtml(url)}" style="display:inline-block;background:#f5c451;color:#101318;text-decoration:none;border-radius:9px;padding:14px 20px;font-size:15px;font-weight:800">${button} &nbsp;↗</a><p style="margin:28px 0 0;padding-top:18px;border-top:1px solid #2a3039;color:#8e959f;font-size:12px;line-height:1.6">This link expires in one hour. If you didn’t ask for this, you can safely ignore it. No kicks were harmed in the making of this email.</p></td></tr><tr><td style="padding:18px 30px;background:#101318;color:#8e959f;font-size:11px;letter-spacing:.5px">AND IT’S NO GOOD · ONE POSITION. ALL SEASON. EVERY MISS.</td></tr></table></td></tr></table></body></html>`;
   const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;
   if (postmarkToken) {
     const response = await fetch('https://api.postmarkapp.com/email', {
@@ -133,5 +144,5 @@ export async function sendAuthMail(user: any, purpose: 'VERIFY' | 'RESET') {
     }
     return;
   }
-  await transport.sendMail({ from: process.env.MAIL_FROM, to: user.email, subject, text });
+  await transport.sendMail({ from: process.env.MAIL_FROM, to: user.email, subject, text, html });
 }

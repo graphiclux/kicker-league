@@ -272,8 +272,10 @@ export default function Mobile() {
     return (
       <SafeAreaView style={s.root}>
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-          <Image source={require('../assets/header-mark.png')} style={s.brandIcon} />
-          <Text style={s.logo}>And it’s no good.</Text>
+          <View style={s.loginBrand}>
+            <Image source={require('../assets/header-mark.png')} style={s.brandIcon} />
+            <Text style={s.logo}>AND IT’S NO GOOD</Text>
+          </View>
           <Text style={s.hero}>Great season.{`\n`}Terrible kicks.</Text>
           <Text style={s.sub}>One draft. One kicking position. Every miss matters.</Text>
           {connectionIssue && (
@@ -339,8 +341,8 @@ export default function Mobile() {
   return (
     <SafeAreaView style={s.root}>
       <View style={s.header}>
-        <Image source={require('../assets/header-mark.png')} style={s.brandIcon} />
-        <View style={{ flex: 1 }}>
+        <View style={s.headerBrand}>
+          <Image source={require('../assets/header-mark.png')} style={s.brandIcon} />
           <Text style={s.logo}>AND IT’S NO GOOD</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Notifications and account" onPress={() => setScreen('inbox')} style={s.weekArrow}><Image source={tabIcons.inbox} style={[s.tabIcon, {tintColor: '#F2F4F7'}]} /></Pressable>
@@ -722,6 +724,8 @@ const s = StyleSheet.create({
   selectedFranchise: {borderLeftWidth: 3, borderLeftColor: '#F5C451', paddingLeft: 10, backgroundColor: '#1A1F27'},
   root: { flex: 1, backgroundColor: '#101318' },
   header: { paddingHorizontal: 18, paddingTop: 2, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerBrand: { position: 'absolute', left: '50%', transform: [{ translateX: -112 }], flexDirection: 'row', alignItems: 'center', gap: 8 },
+  loginBrand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 18 },
   brandIcon: { width: 48, height: 54 },
   edition: { fontSize: 11, color: '#8E959F', fontVariant: ['tabular-nums'] },
   logo: { fontFamily: 'sans-serif-condensed', fontSize: 23, fontWeight: '900', color: '#F2F4F7', letterSpacing: -.7 },

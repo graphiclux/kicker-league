@@ -19,6 +19,7 @@ import {
   passwordHash,
   newSession,
   sendAuthMail,
+  sendProductMail,
   hash,
   token,
   accessFor,
@@ -119,10 +120,18 @@ export class AuthController {
       .object({ token: z.string().max(200), password: z.string().min(12).max(128) })
       .parse(body);
     const ph = await passwordHash(password);
+    const authToken = await db.authToken.findUnique({ where: { hash: hash(raw) }, include: { user: true } });
     await this.consume(raw, 'RESET', async (tx: any, t: any) => {
       await tx.user.update({ where: { id: t.userId }, data: { passwordHash: ph } });
       await tx.session.updateMany({ where: { userId: t.userId }, data: { revokedAt: new Date() } });
       await audit(tx, t.userId, 'PASSWORD_RESET', t.userId, 'Password reset using emailed token');
+    });
+    if (authToken?.user) await sendProductMail({
+      to: authToken.user.email,
+      subject: 'Your And It’s No Good password was changed',
+      eyebrow: 'ACCOUNT SECURITY',
+      title: 'Password changed. The kicks can continue.',
+      copy: 'Your password was successfully changed. If you did not do this, reset it again immediately and review your account activity.',
     });
     return { ok: true };
   }

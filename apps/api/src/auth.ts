@@ -147,3 +147,33 @@ export async function sendAuthMail(user: any, purpose: 'VERIFY' | 'RESET') {
   }
   await transport.sendMail({ from: process.env.MAIL_FROM, to: user.email, subject, text, html });
 }
+
+export async function sendProductMail(input: {
+  to: string;
+  subject: string;
+  eyebrow: string;
+  title: string;
+  copy: string;
+  text?: string;
+  url?: string;
+  button?: string;
+}) {
+  const url = input.url ? escapeHtml(input.url) : '';
+  const button = input.button && input.url
+    ? `<a href="${url}" style="display:inline-block;background:#f5c451;color:#101318;text-decoration:none;border-radius:9px;padding:14px 20px;font-size:15px;font-weight:800">${escapeHtml(input.button)} &nbsp;↗</a>`
+    : '';
+  const html = `<!doctype html><html><body style="margin:0;background:#101318;color:#f2f4f7;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#101318;padding:32px 14px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#1a1f27;border:1px solid #2a3039;border-radius:18px;overflow:hidden"><tr><td style="padding:28px 30px 20px;border-bottom:1px solid #2a3039"><span style="display:inline-block;background:#f5c451;color:#101318;border-radius:9px;padding:10px 12px;font-size:20px;font-weight:900;transform:rotate(-4deg)">⚑</span><span style="display:inline-block;margin-left:12px;vertical-align:top;padding-top:4px;color:#f2f4f7;font-size:13px;font-weight:800;letter-spacing:.6px;line-height:1.15">AND IT’S<br><span style="font-size:20px;letter-spacing:-.7px">NO GOOD.</span></span></td></tr><tr><td style="padding:34px 30px 28px"><div style="color:#f5c451;font-size:11px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;margin-bottom:14px">${escapeHtml(input.eyebrow)}</div><h1 style="margin:0 0 18px;color:#f2f4f7;font-size:30px;line-height:1.15;letter-spacing:-.8px">${escapeHtml(input.title)}</h1><p style="margin:0 0 26px;color:#a7afbb;font-size:15px;line-height:1.6">${escapeHtml(input.copy)}</p>${button}</td></tr><tr><td style="padding:18px 30px;background:#101318;color:#8e959f;font-size:11px;letter-spacing:.5px">AND IT’S NO GOOD · ONE POSITION. ALL SEASON. EVERY MISS.</td></tr></table></td></tr></table></body></html>`;
+  const text = input.text || `${input.title}\n\n${input.copy}${input.url ? `\n${input.url}` : ''}`;
+  const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;
+  if (postmarkToken) {
+    const response = await fetch('https://api.postmarkapp.com/email', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Postmark-Server-Token': postmarkToken },
+      body: JSON.stringify({ From: process.env.MAIL_FROM, To: input.to, Subject: input.subject, TextBody: text, HtmlBody: html, MessageStream: process.env.POSTMARK_MESSAGE_STREAM || 'outbound' }),
+    });
+    if (!response.ok) throw new Error(`Postmark rejected the email (${response.status})`);
+    return;
+  }
+  const transport = nodemailer.createTransport({ host: process.env.MAIL_HOST, port: Number(process.env.MAIL_PORT || 1025), secure: process.env.MAIL_SECURE === 'true' });
+  await transport.sendMail({ from: process.env.MAIL_FROM, to: input.to, subject: input.subject, text, html });
+}

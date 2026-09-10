@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import { db, json } from '../../apps/api/src/db';
 import { processImport } from '../../apps/api/src/scoring.service';
 import { runDraftClocks } from '../../apps/api/src/draft.service';
+import { sendProductMail } from '../../apps/api/src/auth';
 const connection = new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: null });
 const queue = new Queue('aing-imports', { connection });
 const worker = new Worker('aing-imports', async (job) => processImport(job.data.importId), {
@@ -53,6 +54,8 @@ async function tick() {
               },
             });
           }
+        } else if (m.topic === 'mail.send') {
+          await sendProductMail(p);
         } else if (m.topic === 'push.receipt') {
           const r = await fetch('https://exp.host/--/api/v2/push/getReceipts', {
             method: 'POST',
@@ -113,6 +116,20 @@ async function tick() {
                 const body = `${t.name}: ${t.roster!.teamCode} has ${s?.points || 0} points in week ${p.week}.`;
                 await tx.notification.create({
                   data: { userId: t.ownerId, title, body, data: json(p) },
+                });
+                await tx.outbox.create({
+                  data: {
+                    topic: 'mail.send',
+                    payload: json({
+                      to: (await tx.user.findUniqueOrThrow({ where: { id: t.ownerId }, select: { email: true } })).email,
+                      subject: `Week ${p.week} scoring update: ${t.roster!.teamCode}`,
+                      eyebrow: 'SCORING UPDATE',
+                      title: 'The scoreboard has moved.',
+                      copy: `${t.name} picked the ${t.roster!.teamCode} kicking position. It now has ${s?.points || 0} fantasy points for week ${p.week}. The misses are adding up nicely.`,
+                      url: `${process.env.WEB_URL}/`,
+                      button: 'Open the clubhouse',
+                    }),
+                  },
                 });
                 const devices = await tx.pushDevice.findMany({ where: { userId: t.ownerId } });
                 for (const device of devices)

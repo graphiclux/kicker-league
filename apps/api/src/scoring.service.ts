@@ -147,6 +147,21 @@ export async function processImport(id: string) {
           where: { id },
           data: { status: 'COMPLETED', completedAt: new Date(), error: null },
         });
+        const importer = await tx.user.findUnique({ where: { id: batch.uploadedBy }, select: { email: true } });
+        if (importer) await tx.outbox.create({
+          data: {
+            topic: 'mail.send',
+            payload: json({
+              to: importer.email,
+              subject: `Scoring import complete: ${batch.filename}`,
+              eyebrow: 'SUPER ADMIN · IMPORT COMPLETE',
+              title: 'The numbers are in.',
+              copy: `Your ${batch.provider} import for ${batch.filename} completed successfully. ${parsed.rows.length} kicking events were processed and the global scoring engine was recalculated.`,
+              url: `${process.env.WEB_URL}/`,
+              button: 'Open the league office',
+            }),
+          },
+        });
         await audit(tx, batch.uploadedBy, 'IMPORT_COMPLETED', id, batch.reason, undefined, {
           events: parsed.rows.length,
           scopes: parsed.scopes,
@@ -155,9 +170,23 @@ export async function processImport(id: string) {
       { timeout: 120000 },
     );
   } catch (e) {
-    await db.statImport.update({
+    const failed = await db.statImport.update({
       where: { id },
       data: { status: 'FAILED', error: (e as Error).message },
+    });
+    const importer = await db.user.findUnique({ where: { id: failed.uploadedBy }, select: { email: true } });
+    if (importer) await db.outbox.create({
+      data: {
+        topic: 'mail.send',
+        payload: json({
+          to: importer.email,
+          subject: `Scoring import needs attention: ${failed.filename}`,
+          eyebrow: 'SUPER ADMIN · IMPORT FAILED',
+          title: 'The spreadsheet missed the uprights.',
+          copy: `The import could not be completed. Review the error in the league office before trying again: ${(e as Error).message}`,
+          url: `${process.env.WEB_URL}/`, button: 'Review the import',
+        }),
+      },
     });
     throw e;
   }

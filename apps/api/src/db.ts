@@ -27,6 +27,11 @@ export async function audit(
 export async function outbox(tx: Tx, topic: string, payload: unknown) {
   await tx.outbox.create({ data: { topic, payload: json(payload) } });
 }
+export async function mailOutbox(tx: Tx, input: {
+  to: string; subject: string; eyebrow: string; title: string; copy: string; text?: string; url?: string; button?: string;
+}) {
+  await outbox(tx, 'mail.send', input);
+}
 export async function lockLeague(tx: Tx, id: string) {
   await tx.$queryRaw`SELECT id FROM "League" WHERE id=${id} FOR UPDATE`;
 }

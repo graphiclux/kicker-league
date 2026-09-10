@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { db, Tx, audit, lockLeague, outbox } from './db';
+import { db, Tx, audit, lockLeague, outbox, mailOutbox } from './db';
 export function shuffled<T>(items: T[]): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
@@ -11,7 +11,7 @@ export function shuffled<T>(items: T[]): T[] {
 export async function selectPick(tx: Tx, id: string, ownerId: string | null, teamCode?: string) {
   const league = await tx.league.findUniqueOrThrow({
     where: { id },
-    include: { teams: { orderBy: { draftOrder: 'asc' } }, rosters: true },
+    include: { teams: { orderBy: { draftOrder: 'asc' }, include: { owner: true } }, rosters: true },
   });
   if (league.status !== 'DRAFTING') throw new Error('Draft is not running');
   const team = league.teams.find((t) => t.draftOrder === league.currentPick);
@@ -62,6 +62,26 @@ export async function selectPick(tx: Tx, id: string, ownerId: string | null, tea
     id,
   );
   await outbox(tx, 'draft.updated', { leagueId: id });
+  await mailOutbox(tx, {
+    to: team.owner.email,
+    subject: `Pick confirmed: ${teamCode} is yours`,
+    eyebrow: finished ? 'DRAFT COMPLETE' : 'PICK CONFIRMED',
+    title: finished ? 'The picks are in.' : 'A questionable choice, officially recorded.',
+    copy: `You own the ${teamCode} kicking position in ${league.name}. Every kicker and backup for that franchise counts automatically all season.`,
+    url: `${process.env.WEB_URL}/`,
+    button: 'Open the clubhouse',
+  });
+  if (finished) {
+    const members = league.teams;
+    for (const member of members) await mailOutbox(tx, {
+      to: member.owner.email,
+      subject: `${league.name}: the draft is complete`,
+      eyebrow: 'DRAFT COMPLETE',
+      title: 'No trades. No take-backs.',
+      copy: `The ${league.name} draft is complete. Your franchise is locked for the season, including every backup kicker.`,
+      url: `${process.env.WEB_URL}/`, button: 'See the final board',
+    });
+  }
   return roster;
 }
 export async function runDraftClocks() {

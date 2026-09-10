@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { db, audit, lockLeague, outbox } from './db';
+import { db, audit, lockLeague, outbox, mailOutbox } from './db';
 import { AuthGuard } from './auth';
 import { leagueSchema, TEAM_CODES } from '../../../packages/core/src';
 import { selectPick, shuffled } from './draft.service';
@@ -70,6 +70,14 @@ export class LeaguesController {
         l,
         l.id,
       );
+      await mailOutbox(tx, {
+        to: req.user.email,
+        subject: `Your league is ready: ${l.name}`,
+        eyebrow: 'LEAGUE CREATED',
+        title: 'The bad decisions have a clubhouse.',
+        copy: `Your league “${l.name}” is ready. Share the invite code and get your people lined up for one gloriously questionable draft.`,
+        text: `Your league is ready: ${l.name}\nInvite code: ${l.inviteCode}`,
+      });
       return l;
     });
   }
@@ -103,6 +111,13 @@ export class LeaguesController {
         l.id,
       );
       await outbox(tx, 'draft.updated', { leagueId: l.id });
+      await mailOutbox(tx, {
+        to: req.user.email,
+        subject: `You joined ${l.name}`,
+        eyebrow: 'YOU’RE IN',
+        title: 'Welcome to the wrong side of the uprights.',
+        copy: `Your team “${d.teamName}” is in ${l.name}. One franchise. One draft. A lifetime of explaining the kicker choice.`,
+      });
       return l;
     });
   }
@@ -345,6 +360,17 @@ export class LeaguesController {
         id,
       );
       await outbox(tx, 'draft.updated', { leagueId: id });
+      if (action === 'start' || action === 'pause' || action === 'resume') {
+        const members = await tx.fantasyTeam.findMany({ where: { leagueId: id }, include: { owner: true } });
+        for (const member of members) await mailOutbox(tx, {
+          to: member.owner.email,
+          subject: action === 'start' ? `The ${l.name} draft is live` : `${l.name}: draft ${action}d`,
+          eyebrow: action === 'start' ? 'DRAFT ROOM OPEN' : `DRAFT ${action.toUpperCase()}D`,
+          title: action === 'start' ? 'Make your one pick count.' : action === 'pause' ? 'The clock is taking five.' : 'The clock is running again.',
+          copy: action === 'start' ? `The draft for ${l.name} has started. Your kicking position is yours all season, including every backup.` : action === 'pause' ? `The commissioner paused the ${l.name} draft. Your place in the order is safe.` : `The ${l.name} draft has resumed. Keep your rankings close and your panic closer.`,
+          url: `${process.env.WEB_URL}/`, button: 'Open the draft room',
+        });
+      }
       return { ok: true };
     });
   }

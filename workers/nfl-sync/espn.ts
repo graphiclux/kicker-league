@@ -2,6 +2,8 @@ import { db, json, outbox } from '../../apps/api/src/db';
 import { digest } from '../../packages/core/src/providers';
 import { fetchEspn, normalizeEspn, shouldFetchEspnGame } from '../../packages/core/src/espn';
 import { writeFileSync } from 'node:fs';
+import Redis from 'ioredis';
+const redis = new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: 1 });
 
 const interval = Number(process.env.NFL_AUTO_SYNC_INTERVAL_MINUTES || 10);
 if (!Number.isFinite(interval) || interval < 1) throw new Error('Invalid NFL_AUTO_SYNC_INTERVAL_MINUTES');
@@ -42,6 +44,10 @@ async function sync() {
     } catch (error) { failures++; console.error(`ESPN game ${event.id} failed:`, (error as Error).message); }
   }
   if (failures) throw new Error(`${failures} ESPN games failed validation or import`);
+  await redis.set('aing:nfl:status', JSON.stringify({ checkedAt: new Date().toISOString(), games: [...events.values()].map(({event, season, week}) => ({
+    id: event.id, season, week, state: event.status?.type?.state, detail: event.status?.type?.detail,
+    teams: (event.competitions?.[0]?.competitors || []).map((c: any) => ({ code: c.team.abbreviation === 'WSH' ? 'WAS' : c.team.abbreviation, score: c.score })),
+  })) }), 'EX', 3600);
   writeFileSync('/tmp/aing-espn-heartbeat', String(Date.now()));
   console.log(`ESPN poll complete: ${events.size} eligible games; next check in ${interval} minutes`);
 }

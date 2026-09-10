@@ -30,7 +30,7 @@ const base = process.env.EXPO_PUBLIC_API_URL || 'https://anditsnogood.ddev.site/
 let access: string | null = null;
 const api = new ApiClient(base, () => access);
 const pts = (n: number) => (n > 0 ? `+${n}` : String(n));
-const destinations = ['clubhouse', 'draft', 'standings', 'nfl', 'inbox'];
+const destinations = ['clubhouse', 'nfl', 'standings', 'more'];
 const tabIcons: Record<string, any> = {
   clubhouse: require('../assets/tab-clubhouse.png'),
   draft: require('../assets/tab-draft.png'),
@@ -38,17 +38,19 @@ const tabIcons: Record<string, any> = {
   inbox: require('../assets/tab-inbox.png'),
   nfl: require('../assets/tab-clubhouse.png'),
   admin: require('../assets/tab-inbox.png'),
+  more: require('../assets/tab-inbox.png'),
 };
 function SelectionMenu({ label, value, options, onSelect }: {
   label: string;
   value: string;
-  options: { id: string; name: string }[];
+  options: { id: string; name: string; subtitle?: string }[];
   onSelect: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.id === value);
   return (
     <View>
+      <Text style={[s.label, { marginBottom: 6 }]}>{label}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${selected?.name || 'Select'}`}
@@ -64,8 +66,9 @@ function SelectionMenu({ label, value, options, onSelect }: {
           <View style={s.menuGlyphLine} />
         </View>
       </Pressable>
-      <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-        <SafeAreaView style={s.root}>
+      <Modal transparent visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
+        <View style={s.sheetBackdrop}><Pressable accessibilityLabel="Close league menu" style={{flex: 1}} onPress={() => setOpen(false)} /><SafeAreaView style={s.sheet}>
+          <View style={s.sheetHandle} />
           <View style={s.menuHeader}>
             <Text accessibilityRole="header" style={s.title}>{label}</Text>
             <Button title="Close" secondary onPress={() => setOpen(false)} />
@@ -79,12 +82,12 @@ function SelectionMenu({ label, value, options, onSelect }: {
                 style={[s.menuOption, option.id === value && s.menuOptionSelected]}
                 onPress={() => { onSelect(option.id); setOpen(false); }}
               >
-                <Text style={s.menuValue}>{option.name}</Text>
+                <View style={{flex: 1}}><Text style={s.menuValue}>{option.name}</Text>{option.subtitle && <Text style={s.sub}>{option.subtitle}</Text>}</View>
                 {option.id === value && <Text style={s.menuIcon}>✓</Text>}
               </Pressable>
             ))}
           </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView></View>
       </Modal>
     </View>
   );
@@ -127,6 +130,7 @@ export default function Mobile() {
     [busy, setBusy] = useState(false),
     [connectionIssue, setConnectionIssue] = useState<string | null>(null),
     [screen, setScreen] = useState('clubhouse'),
+    [nflFilter, setNflFilter] = useState('all'),
     [leagueId, setLeagueId] = useState(''),
     [week, setWeek] = useState(1),
     [register, setRegister] = useState(false),
@@ -202,6 +206,8 @@ export default function Mobile() {
     queryFn: () => api.request(`/leagues/${league!.id}/standings?week=${week}`),
     enabled: !!league,
   });
+  const fieldScores = useQuery<any[]>({ queryKey: ['field-scores', season, week], queryFn: () => api.request(`/scores?season=${season}&week=${week}`), enabled: !!user });
+  const feedStatus = useQuery<any>({ queryKey: ['nfl-status', season, week], queryFn: () => api.request(`/nfl-status?season=${season}&week=${week}`), enabled: !!user });
   const my = standing.data?.find((t) => t.ownerId === user?.id);
   useEffect(() => {
     setTeamNameEdit(my?.name || '');
@@ -340,12 +346,12 @@ export default function Mobile() {
         <View style={{ flex: 1 }}>
           <Text style={s.logo}>AND IT’S NO GOOD</Text>
         </View>
-        <Text style={s.edition}>{season}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Notifications and account" onPress={() => setScreen('inbox')} style={s.weekArrow}><Image source={tabIcons.inbox} style={[s.tabIcon, {tintColor: '#F2F4F7'}]} /></Pressable>
       </View>
       <View style={s.navigation}>
           <SelectionMenu label="Your leagues" value={league?.id || ''}
-            options={[...(leagues.data || []).map((l) => ({ id: l.id, name: l.name })), { id: '__manage', name: '+ Create or join a league' }]}
-            onSelect={(id) => { if (id === '__manage') setScreen('leagues'); else setLeagueId(id); }} />
+            options={[...(leagues.data || []).map((l) => ({ id: l.id, name: l.name, subtitle: `${l.teams.find(t => t.ownerId === user.id)?.name || ''} · ${l.teams.length} teams` })), { id: '__manage', name: '+ Create or join a league' }, { id: '__draft', name: 'Draft room' }, { id: '__rules', name: 'Scoring rules' }, ...(user.role === 'SUPER_ADMIN' ? [{id: '__admin', name: 'Super Admin'}] : [])]}
+            onSelect={(id) => { if (id === '__manage') setScreen('leagues'); else if (id.startsWith('__')) setScreen(id.slice(2)); else setLeagueId(id); }} />
       </View>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         {connectionIssue && <Pressable accessibilityRole="button" onPress={() => setConnectionIssue(null)} style={s.connectionNotice}><Text style={s.sub}>{connectionIssue}</Text><Text style={s.noticeDismiss}>Dismiss</Text></Pressable>}
@@ -372,6 +378,8 @@ export default function Mobile() {
         )}
         {screen === 'clubhouse' && (
           <>
+            <Pressable accessibilityRole="button" accessibilityLabel="Edit your team name" onPress={() => setScreen('inbox')}><Text style={s.hero}>{my?.name || 'Your clubhouse'} <Text style={s.menuIcon}>✎</Text></Text></Pressable>
+            <Text style={s.sub}>{my?.roster?.teamCode || 'No franchise drafted'} · Your kicking franchise</Text>
             <View style={s.scoreCard}>
               <View style={s.sectionHeading}>
                 <Text style={s.scoreLabel}>YOUR WEEK</Text>
@@ -389,12 +397,13 @@ export default function Mobile() {
                 </View>
               </View>
             </View>
-            <View style={s.teamStrip}>
-              <View style={s.franchiseBadge}><Text style={s.franchiseCode}>{my?.roster?.teamCode || '—'}</Text></View>
-              <View style={{ flex: 1 }}><Text style={s.teamName}>{my?.name || 'No team yet'}</Text><Text style={s.sub}>{my?.roster ? 'Your kicking franchise · Locked for the season' : 'Choose your franchise in the draft'}</Text></View>
+            <View style={s.syncStrip}><Text style={s.statusTag}>{feedStatus.isError || feedStatus.data?.stale ? 'CHECKING CONNECTION' : feedStatus.data?.games.some((g: any) => g.state === 'in') ? '● LIVE' : 'AUTO SYNC'}</Text><Text style={s.sub}>{feedStatus.data?.checkedAt ? `Feed checked ${new Date(feedStatus.data.checkedAt).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}` : 'Waiting for feed status'}</Text><Text style={s.sub}>Scores update automatically</Text></View>
+            <View style={[s.teamStrip, s.card]}>
+              {nfl.data?.find(t => t.code === my?.roster?.teamCode)?.assignments[0]?.player.imageUrl ? <Image source={{uri: nfl.data.find(t => t.code === my?.roster?.teamCode)!.assignments[0].player.imageUrl!}} style={s.kickerAvatar} /> : <View style={s.franchiseBadge}><Text style={s.franchiseCode}>{my?.roster?.teamCode || '—'}</Text></View>}
+              <View style={{ flex: 1 }}><Text style={s.teamName}>{nfl.data?.find(t => t.code === my?.roster?.teamCode)?.assignments[0]?.player.name || 'Kicker to be confirmed'}</Text><Text style={s.sub}>{my?.roster ? 'Kicking position · Backups included' : 'Choose your franchise in the draft'}</Text></View>
             </View>
             {!my?.roster && <Button title={league ? 'Go to draft' : 'Create or join a league'} onPress={() => setScreen(league ? 'draft' : 'leagues')} />}
-            <View style={s.sectionHeading}><Text style={s.title}>Kick feed</Text><Text style={s.label}>{events.data?.length || 0} EVENTS</Text></View>
+            <View style={s.sectionHeading}><Text style={s.title}>Every kick tells a story</Text><Text style={s.label}>{events.data?.length || 0} EVENTS</Text></View>
             {events.data?.length ? (
               events.data.map((e) => (
                 <View style={s.ledgerRow} key={e.id}>
@@ -415,16 +424,23 @@ export default function Mobile() {
         )}
         {screen === 'nfl' && (
           <View>
-            <Text style={s.label}>THE WHOLE FIELD</Text>
-            <Text style={s.title}>NFL kicking</Text>
-            <Text style={s.sub}>Real kicker names, headshots, and franchise scoring.</Text>
-            {nfl.data?.map((t) => <View style={s.card} key={t.code}>
-              {t.assignments[0]?.player.imageUrl && <Image source={{ uri: t.assignments[0].player.imageUrl }} style={s.kickerAvatar} />}
-              <Text style={s.title}>{t.code} · {t.city} {t.name}</Text>
-              <Text style={s.sub}>{t.assignments[0]?.player.name || 'Kicker to be confirmed'}</Text>
-            </View>)}
+            <Text style={s.hero}>The whole field.</Text><Text style={s.sub}>Every franchise. Every kick.</Text>
+            <View style={s.filters}>{[['all', 'All 32'], ['in', 'Playing'], ['post', 'Final']].map(([id,label]) => <Pressable key={id} accessibilityRole="button" accessibilityState={{selected: nflFilter === id}} onPress={() => setNflFilter(id)} style={[s.filter, nflFilter === id && s.filterActive]}><Text style={[s.text, nflFilter === id && {color: '#101318', fontWeight: '700'}]}>{label}</Text></Pressable>)}</View>
+            {feedStatus.data?.stale && <Text style={s.sub}>Game status is delayed. Scores shown are the last saved results.</Text>}
+            <Text style={[s.label, {textAlign: 'right', marginVertical: 12}]}>FANTASY PTS · WEEK {week}</Text>
+            {(nfl.data || []).filter(t => nflFilter === 'all' || (!feedStatus.data?.stale && feedStatus.data?.games.some((g: any) => g.state === nflFilter && g.teams.some((c: any) => c.code === t.code)))).map(t => {
+              const game = feedStatus.data?.games.find((g: any) => g.teams.some((c: any) => c.code === t.code));
+              return <View style={[s.ledgerRow, t.code === my?.roster?.teamCode && s.selectedFranchise]} key={t.code}>
+                {t.assignments[0]?.player.imageUrl ? <Image source={{uri: t.assignments[0].player.imageUrl}} style={s.kickerAvatar} /> : <View style={s.franchiseBadge}><Text style={s.franchiseCode}>{t.code}</Text></View>}
+                <View style={{flex: 1}}><Text style={s.teamName}>{t.code} · {t.name}</Text><Text style={s.sub}>{t.assignments[0]?.player.name || 'Kicker to be confirmed'}</Text>{game && <Text style={s.statusTag}>{game.detail}</Text>}</View>
+                <Text style={s.points}>{fieldScores.isError ? '—' : pts(fieldScores.data?.find(v => v.teamCode === t.code)?.points || 0)}</Text>
+              </View>;
+            })}
+            {nflFilter !== 'all' && !feedStatus.data?.games.some((g: any) => g.state === nflFilter) && <Text style={s.sub}>No {nflFilter === 'in' ? 'live' : 'recent final'} games reported for this week.</Text>}
           </View>
         )}
+        {screen === 'more' && <View><Text style={s.hero}>The league office.</Text><Text style={s.sub}>One position. All season. Every miss.</Text>{[['leagues','Create or join a league'],['draft','Draft room'],['rules','Scoring rules'],['inbox','Account & notifications'], ...(user.role === 'SUPER_ADMIN' ? [['admin','Super Admin']] : [])].map(([id,label]) => <Pressable key={id} accessibilityRole="button" style={s.line} onPress={() => setScreen(id)}><Text style={s.text}>{label}</Text><Text style={s.menuIcon}>→</Text></Pressable>)}</View>}
+        {screen === 'rules' && <View><Text style={s.hero}>Cheer for the miss.</Text><Text style={s.sub}>Global scoring rules · {season}</Text>{(() => {const r = seasons.data?.find(v => v.year === season)?.rule; return r ? [[`Missed FG up to ${r.shortMax} yards`, r.shortMiss], [`Missed FG over ${r.shortMax} yards`, r.longMiss], ['Missed extra point',r.xpMiss], ['Blocked extra point',r.xpBlocked], [`Made FG from ${r.longMadeMin} yards`,r.longMade], ['Other made kicks',0]].map(([label,value]) => <View key={String(label)} style={s.line}><Text style={[s.text,{flex:1}]}>{label}</Text><Text style={s.points}>{pts(Number(value))}</Text></View>) : <Text style={s.sub}>Loading scoring rules…</Text>;})()}<Text style={s.sub}>Your franchise includes replacement kickers. No trades or lineup changes after the draft.</Text></View>}
         {screen === 'admin' && user?.role === 'SUPER_ADMIN' && (
           <View><Text style={s.label}>SUPER ADMIN</Text><Text style={s.title}>League office</Text><Text style={s.sub}>Scoring overrides, imports, kicker assignments, and audit history are available in the web admin console. Sign in there and choose Super Admin.</Text><Button title="Open web admin" onPress={() => run(() => Linking.openURL(base.replace(/\/api\/?$/, '/')))} /></View>
         )}
@@ -680,10 +696,10 @@ export default function Mobile() {
         />}
       </ScrollView>
       <View style={s.bottomNav}>
-        {[...destinations, ...(user?.role === 'SUPER_ADMIN' ? ['admin'] : [])].map((id) => (
+        {destinations.map((id) => (
           <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: screen === id }} accessibilityLabel={id[0].toUpperCase() + id.slice(1)} onPress={() => setScreen(id)} style={s.bottomTab}>
-            <Image source={tabIcons[id]} style={[s.tabIcon, { tintColor: screen === id ? '#F5C451' : '#858D99' }]} />
-            <Text style={[s.tabLabel, screen === id && { color: '#F5C451' }]}>{id[0].toUpperCase() + id.slice(1)}</Text>
+            {id === 'more' ? <Text style={[s.menuIcon, {color: screen === id ? '#F5C451' : '#A7AFBB'}]}>•••</Text> : <Image source={tabIcons[id]} style={[s.tabIcon, { tintColor: screen === id ? '#F5C451' : '#A7AFBB' }]} />}
+            <Text style={[s.tabLabel, screen === id && { color: '#F5C451' }]}>{id === 'nfl' ? 'NFL' : id[0].toUpperCase() + id.slice(1)}</Text>
           </Pressable>
         ))}
       </View>
@@ -691,13 +707,21 @@ export default function Mobile() {
   );
 }
 const s = StyleSheet.create({
+  sheetBackdrop: {flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end'},
+  sheet: {maxHeight: '85%', backgroundColor: '#1A1F27', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12},
+  sheetHandle: {width: 44, height: 4, borderRadius: 2, backgroundColor: '#A7AFBB', alignSelf: 'center', marginBottom: 12},
+  syncStrip: {backgroundColor: '#242A33', borderRadius: 8, padding: 12, gap: 2},
+  filters: {flexDirection: 'row', gap: 6, marginTop: 18},
+  filter: {flex: 1, alignItems: 'center', paddingVertical: 12, backgroundColor: '#242A33', borderRadius: 6},
+  filterActive: {backgroundColor: '#F5C451'},
+  selectedFranchise: {borderLeftWidth: 3, borderLeftColor: '#F5C451', paddingLeft: 10, backgroundColor: '#1A1F27'},
   root: { flex: 1, backgroundColor: '#101318' },
   header: { paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 10 },
   brandIcon: { width: 28, height: 28, borderRadius: 6 },
   edition: { fontSize: 11, color: '#8E959F', fontVariant: ['tabular-nums'] },
   logo: { fontSize: 13, fontWeight: '900', color: '#F2F4F7', letterSpacing: 1.4 },
   navigation: { flexShrink: 0, paddingHorizontal: 22 },
-  menuTrigger: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, minHeight: 48, borderBottomWidth: 1, borderColor: '#2A3039' },
+  menuTrigger: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 12, backgroundColor: '#1A1F27', borderRadius: 8, minHeight: 48, borderWidth: 1, borderColor: '#2A3039' },
   menuIcon: { color: '#F5C451', fontSize: 22 },
   menuGlyph: { width: 22, gap: 4, alignItems: 'flex-end' },
   menuGlyphLine: { width: 22, height: 2, borderRadius: 1, backgroundColor: '#F5C451' },
@@ -742,7 +766,7 @@ const s = StyleSheet.create({
   eventTitle: { color: '#F2F4F7', fontSize: 15, fontWeight: '600' },
   rank: { fontSize: 18, color: '#8E959F', fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16 },
-  score: { fontSize: 100, fontWeight: '800', color: '#F2F4F7', letterSpacing: -6, fontVariant: ['tabular-nums'], lineHeight: 116 },
+  score: { fontSize: 88, fontWeight: '800', color: '#F5C451', letterSpacing: -6, fontVariant: ['tabular-nums'], lineHeight: 116 },
   points: { fontSize: 24, fontWeight: '700', color: '#F5C451', fontVariant: ['tabular-nums'] },
   line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#2A3039' },
   teamStrip: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },

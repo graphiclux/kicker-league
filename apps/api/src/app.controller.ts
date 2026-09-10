@@ -20,6 +20,15 @@ import { TEAM_CODES, weekSchema } from '../../../packages/core/src';
 const redis = new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: 1 });
 @Controller()
 export class AppController {
+  @Get('nfl-status') async nflStatus(@Query() query: any) {
+    const { season, week } = weekSchema.parse(query);
+    const raw = await redis.get('aing:nfl:status');
+    const status = raw ? JSON.parse(raw) : { checkedAt: null, games: [] };
+    const last = await db.statImport.findFirst({ where: { provider: 'espn', status: 'COMPLETED', events: { some: { season, week } } }, orderBy: { completedAt: 'desc' }, select: { completedAt: true } });
+    return { checkedAt: status.checkedAt, updatedAt: last?.completedAt || null,
+      stale: !status.checkedAt || Date.now() - Date.parse(status.checkedAt) > 25 * 60_000,
+      games: status.games.filter((g: any) => g.season === season && g.week === week) };
+  }
   @Get('health') async health() {
     try {
       await db.$queryRaw`SELECT 1`;

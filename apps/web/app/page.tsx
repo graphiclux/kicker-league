@@ -523,6 +523,7 @@ function App() {
                     </span>
                   </div>
                   <h2>{myTeam?.name || 'Your next bad idea'}</h2>
+                  <FeedStatus season={league?.season || season} week={week} />
                   <div className="hero-scores">
                     <div>
                       <span>THIS WEEK</span>
@@ -1310,6 +1311,10 @@ function Draft({
     </>
   );
 }
+function FeedStatus({season, week}: {season: number; week: number}) {
+  const status = useQuery<any>({ queryKey: ['nfl-status', season, week], queryFn: () => api.request(`/nfl-status?season=${season}&week=${week}`), refetchInterval: 10000 });
+  return <p role="status" style={{color: '#A7AFBB', fontSize: 13}}><strong style={{color: '#F5C451'}}>{status.isError || status.data?.stale ? 'Feed delayed' : status.data?.games.some((g: any) => g.state === 'in') ? '● LIVE' : 'Auto sync'}</strong> · {status.data?.checkedAt ? `Feed checked ${new Date(status.data.checkedAt).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}` : 'Waiting for feed status'} · Scores update automatically</p>;
+}
 function Nfl({ nfl, season, week }: { nfl: NflTeamView[]; season: number; week: number }) {
   const [team, setTeam] = useState('BUF');
   const scores = useQuery<any[]>({
@@ -1320,9 +1325,10 @@ function Nfl({ nfl, season, week }: { nfl: NflTeamView[]; season: number; week: 
     <>
       <PageTitle
         eyebrow="THE WHOLE FIELD"
-        title="A league of their own."
+        title="The whole field."
         text="Global NFL franchise scoring. The same events power every fantasy league."
       />
+      <FeedStatus season={season} week={week} />
       <div className="nfl-grid">
         {nfl.map((t) => (
           <button

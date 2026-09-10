@@ -62,7 +62,7 @@ export async function selectPick(tx: Tx, id: string, ownerId: string | null, tea
     id,
   );
   await outbox(tx, 'draft.updated', { leagueId: id });
-  await mailOutbox(tx, {
+  if (team.owner.emailDraftEnabled) await mailOutbox(tx, {
     to: team.owner.email,
     subject: `Pick confirmed: ${teamCode} is yours`,
     eyebrow: finished ? 'DRAFT COMPLETE' : 'PICK CONFIRMED',
@@ -73,7 +73,7 @@ export async function selectPick(tx: Tx, id: string, ownerId: string | null, tea
   });
   if (finished) {
     const members = league.teams;
-    for (const member of members) await mailOutbox(tx, {
+    for (const member of members.filter((m) => m.owner.emailDraftEnabled)) await mailOutbox(tx, {
       to: member.owner.email,
       subject: `${league.name}: the draft is complete`,
       eyebrow: 'DRAFT COMPLETE',

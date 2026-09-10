@@ -25,6 +25,14 @@ import { recalculate } from './scoring.service';
 @Controller('admin')
 @UseGuards(AuthGuard, AdminGuard)
 export class AdminController {
+  @Get('email-deliveries') emailDeliveries() {
+    return db.outbox.findMany({
+      where: { topic: 'mail.send' },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      select: { id: true, payload: true, attempts: true, lastError: true, deliveredAt: true, createdAt: true },
+    });
+  }
   @Get('imports') imports() {
     return db.statImport.findMany({
       orderBy: { createdAt: 'desc' },

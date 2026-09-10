@@ -147,8 +147,8 @@ export async function processImport(id: string) {
           where: { id },
           data: { status: 'COMPLETED', completedAt: new Date(), error: null },
         });
-        const importer = await tx.user.findUnique({ where: { id: batch.uploadedBy }, select: { email: true } });
-        if (importer) await tx.outbox.create({
+        const importer = await tx.user.findUnique({ where: { id: batch.uploadedBy }, select: { email: true, emailLeagueEnabled: true } });
+        if (importer?.emailLeagueEnabled) await tx.outbox.create({
           data: {
             topic: 'mail.send',
             payload: json({
@@ -174,8 +174,8 @@ export async function processImport(id: string) {
       where: { id },
       data: { status: 'FAILED', error: (e as Error).message },
     });
-    const importer = await db.user.findUnique({ where: { id: failed.uploadedBy }, select: { email: true } });
-    if (importer) await db.outbox.create({
+    const importer = await db.user.findUnique({ where: { id: failed.uploadedBy }, select: { email: true, emailLeagueEnabled: true } });
+    if (importer?.emailLeagueEnabled) await db.outbox.create({
       data: {
         topic: 'mail.send',
         payload: json({

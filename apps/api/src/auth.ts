@@ -19,6 +19,10 @@ export const publicUser = (u: any) => ({
   role: u.role,
   verifiedAt: u.verifiedAt,
   notificationsEnabled: u.notificationsEnabled,
+  emailScoringEnabled: u.emailScoringEnabled,
+  emailDraftEnabled: u.emailDraftEnabled,
+  emailLeagueEnabled: u.emailLeagueEnabled,
+  emailSecurityEnabled: u.emailSecurityEnabled,
 });
 export const passwordHash = (p: string) =>
   argon2.hash(p, { type: argon2.argon2id, memoryCost: 65536, timeCost: 3 });

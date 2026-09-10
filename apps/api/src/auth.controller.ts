@@ -52,7 +52,7 @@ export class AuthController {
     if (!u || u.suspended || !(await argon2.verify(u.passwordHash, data.password)))
       throw new UnauthorizedException('Invalid email or password');
     const session = await newSession(u, res);
-    void sendProductMail({
+    if (u.emailSecurityEnabled) void sendProductMail({
       to: u.email,
       subject: 'New sign-in to And It’s No Good',
       eyebrow: 'ACCOUNT SECURITY',
@@ -135,7 +135,7 @@ export class AuthController {
       await tx.session.updateMany({ where: { userId: t.userId }, data: { revokedAt: new Date() } });
       await audit(tx, t.userId, 'PASSWORD_RESET', t.userId, 'Password reset using emailed token');
     });
-    if (authToken?.user) await sendProductMail({
+    if (authToken?.user?.emailSecurityEnabled) await sendProductMail({
       to: authToken.user.email,
       subject: 'Your And It’s No Good password was changed',
       eyebrow: 'ACCOUNT SECURITY',

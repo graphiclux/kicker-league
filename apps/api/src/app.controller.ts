@@ -96,13 +96,17 @@ export class AppController {
     const d = z
       .object({
         notificationsEnabled: z.boolean().optional(),
+        emailScoringEnabled: z.boolean().optional(),
+        emailDraftEnabled: z.boolean().optional(),
+        emailLeagueEnabled: z.boolean().optional(),
+        emailSecurityEnabled: z.boolean().optional(),
         displayName: z.string().trim().min(2).max(60).optional(),
       })
       .parse(body);
     return db.user.update({
       where: { id: req.user.id },
       data: d,
-      select: { id: true, displayName: true, notificationsEnabled: true },
+      select: { id: true, displayName: true, notificationsEnabled: true, emailScoringEnabled: true, emailDraftEnabled: true, emailLeagueEnabled: true, emailSecurityEnabled: true },
     });
   }
   @Post('account/delete') @UseGuards(AuthGuard) async deleteAccount(@Body() body: unknown, @Req() req: any) {

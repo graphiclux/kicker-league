@@ -701,6 +701,26 @@ function App() {
                   />{' '}
                   Receive scoring notifications
                 </label>
+                <div className="email-preferences">
+                  {([
+                    ['emailScoringEnabled', 'Scoring update emails'],
+                    ['emailDraftEnabled', 'Draft reminders and pick emails'],
+                    ['emailLeagueEnabled', 'League and import emails'],
+                    ['emailSecurityEnabled', 'Security and sign-in emails'],
+                  ] as const).map(([key, label]) => (
+                    <label className="check-label" key={key}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean((user as any)[key])}
+                        onChange={(e) => run(async () => {
+                          await api.post('/profile', { [key]: e.target.checked });
+                          setUser({ ...user, [key]: e.target.checked } as UserView);
+                        }, 'Email preferences saved.')}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
                 {notifications.data?.length ? (
                   notifications.data.map((n) => (
                     <div className="notification" key={n.id}>
@@ -1134,6 +1154,10 @@ function Draft({
               </button>
             </span>
           </div>
+          <form className="invite-form" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); run(() => api.post(`/leagues/${league.id}/invite`, { email: f.get('email') }), 'Invitation sent.'); e.currentTarget.reset(); }}>
+            <Field label="Invite by email"><input name="email" type="email" placeholder="friend@example.com" required /></Field>
+            <button className="secondary" disabled={busy}>Send invitation</button>
+          </form>
           {league.status === 'LOBBY' && (
             <details>
               <summary>League settings, order, and members</summary>
@@ -1436,6 +1460,11 @@ function Admin({
     queryFn: () => api.request(`/events?season=${season}&week=${week}&teamCode=${team}`),
     enabled: tab === 'events',
   });
+  const emailDeliveries = useQuery<any[]>({
+    queryKey: ['email-deliveries'],
+    queryFn: () => api.request('/admin/email-deliveries'),
+    enabled: tab === 'email',
+  });
   return (
     <>
       <PageTitle
@@ -1444,7 +1473,7 @@ function Admin({
         text="Import once. Score every league. Every correction leaves a record."
       />
       <div className="tabs">
-        {['imports', 'events', 'audit', 'users', 'settings'].map((t) => (
+        {['imports', 'events', 'email', 'audit', 'users', 'settings'].map((t) => (
           <button className={tab === t ? 'active' : 'secondary'} key={t} onClick={() => setTab(t)}>
             {t}
           </button>
@@ -1809,6 +1838,16 @@ function Admin({
           ))}
         </section>
       )}
+      {tab === 'email' && (
+        <section className="panel">
+          <div className="section-heading"><h3>Email delivery</h3><span className="muted">Last 100 messages</span></div>
+          {emailDeliveries.data?.map((mail) => {
+            const payload = mail.payload || {};
+            return <div className="notification" key={mail.id}><MailStatus deliveredAt={mail.deliveredAt} attempts={mail.attempts} error={mail.lastError} /><div><strong>{payload.subject || 'Transactional email'}</strong><p>{payload.to} · {mail.deliveredAt ? `Delivered ${new Date(mail.deliveredAt).toLocaleString()}` : 'Pending delivery'}</p>{mail.lastError && <small>{mail.lastError}</small>}</div></div>;
+          })}
+          {!emailDeliveries.data?.length && <p className="empty-inline">No email deliveries yet.</p>}
+        </section>
+      )}
       {tab === 'users' && (
         <section className="panel">
           <h3>Platform accounts</h3>
@@ -1951,4 +1990,7 @@ function Admin({
       )}
     </>
   );
+}
+function MailStatus({ deliveredAt, attempts, error }: { deliveredAt?: string | null; attempts: number; error?: string | null }) {
+  return <span className={`mail-status ${deliveredAt ? 'sent' : error ? 'failed' : 'pending'}`}>{deliveredAt ? 'SENT' : error ? 'FAILED' : attempts ? 'RETRYING' : 'QUEUED'}</span>;
 }

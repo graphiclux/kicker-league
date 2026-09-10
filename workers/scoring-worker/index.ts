@@ -98,7 +98,7 @@ async function tick() {
                 where: {
                   league: { season: p.season },
                   roster: { isNot: null },
-                  owner: { notificationsEnabled: true },
+                  owner: { notificationsEnabled: true, emailScoringEnabled: true },
                 },
                 include: { roster: true },
               });
@@ -195,7 +195,7 @@ async function sendDraftReminders() {
     const threshold = remaining <= 15 * 60 * 1000 ? '15m' : '24h';
     const key = `aing:mail:draft-reminder:${league.id}:${threshold}`;
     if ((await connection.set(key, '1', 'EX', 3 * 24 * 60 * 60, 'NX')) !== 'OK') continue;
-    for (const team of league.teams) await db.outbox.create({
+    for (const team of league.teams.filter((t) => t.owner.emailDraftEnabled)) await db.outbox.create({
       data: {
         topic: 'mail.send',
         payload: json({

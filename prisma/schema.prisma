@@ -14,6 +14,10 @@ model User {
   suspended Boolean @default(false)
   verifiedAt DateTime?
   notificationsEnabled Boolean @default(true)
+  emailScoringEnabled Boolean @default(true)
+  emailDraftEnabled Boolean @default(true)
+  emailLeagueEnabled Boolean @default(true)
+  emailSecurityEnabled Boolean @default(true)
   deletedAt DateTime?
   createdAt DateTime @default(now())
   sessions Session[]

@@ -70,7 +70,7 @@ export class LeaguesController {
         l,
         l.id,
       );
-      await mailOutbox(tx, {
+      if (req.user.emailLeagueEnabled) await mailOutbox(tx, {
         to: req.user.email,
         subject: `Your league is ready: ${l.name}`,
         eyebrow: 'LEAGUE CREATED',
@@ -111,7 +111,7 @@ export class LeaguesController {
         l.id,
       );
       await outbox(tx, 'draft.updated', { leagueId: l.id });
-      await mailOutbox(tx, {
+      if (req.user.emailLeagueEnabled) await mailOutbox(tx, {
         to: req.user.email,
         subject: `You joined ${l.name}`,
         eyebrow: 'YOU’RE IN',
@@ -135,6 +135,23 @@ export class LeaguesController {
       return next;
     });
     return { id: updated.id, name: updated.name };
+  }
+  @Post(':id/invite') async invite(@Param('id') id: string, @Body() body: unknown, @Req() req: any) {
+    const { email } = z.object({ email: z.email().transform((s) => s.toLowerCase()) }).parse(body);
+    const l = await member(id, req.user.id);
+    commissioner(l, req.user.id);
+    await db.$transaction(async (tx) => {
+      await mailOutbox(tx, {
+        to: email,
+        subject: `You’re invited to ${l.name}`,
+        eyebrow: 'LEAGUE INVITATION',
+        title: 'Come make one terrible kicking choice.',
+        copy: `${req.user.displayName} invited you to ${l.name}. Join with invite code ${l.inviteCode} and prepare for a season of questionable footwork.`,
+        url: `${process.env.WEB_URL}/`, button: 'Join the league',
+      });
+      await audit(tx, req.user.id, 'INVITE_SENT', id, 'Commissioner sent a league invitation', undefined, { email }, id);
+    });
+    return { ok: true };
   }
   @Get(':id') detail(@Param('id') id: string, @Req() req: any) {
     return member(id, req.user.id);
@@ -362,7 +379,7 @@ export class LeaguesController {
       await outbox(tx, 'draft.updated', { leagueId: id });
       if (action === 'start' || action === 'pause' || action === 'resume') {
         const members = await tx.fantasyTeam.findMany({ where: { leagueId: id }, include: { owner: true } });
-        for (const member of members) await mailOutbox(tx, {
+        for (const member of members.filter((m) => m.owner.emailDraftEnabled)) await mailOutbox(tx, {
           to: member.owner.email,
           subject: action === 'start' ? `The ${l.name} draft is live` : `${l.name}: draft ${action}d`,
           eyebrow: action === 'start' ? 'DRAFT ROOM OPEN' : `DRAFT ${action.toUpperCase()}D`,

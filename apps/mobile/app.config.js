@@ -1,5 +1,16 @@
 module.exports = ({ config }) => {
   const profile = process.env.AING_MOBILE_PROFILE;
+  if (profile === 'public') {
+    return {
+      ...config,
+      name: "And It's No Good · Public",
+      android: {
+        ...config.android,
+        package: 'com.anditsnogood.preview',
+        versionCode: 4,
+      },
+    };
+  }
   if (!['usb', 'wifi'].includes(profile)) return config;
   const host = profile === 'wifi' ? process.env.AING_WIFI_HOST : '127.0.0.1';
   if (!host || !/^[a-zA-Z0-9.-]+$/.test(host)) {

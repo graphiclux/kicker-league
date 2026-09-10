@@ -3,7 +3,7 @@ import { gunzipSync } from 'node:zlib';
 import { parse as parseCsv } from 'csv-parse/sync';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { z } from 'zod';
-import { db, audit, json, lockWeek, outbox } from './db';
+import { db, audit, json, lockWeek, outbox, mailOutbox } from './db';
 import { AuthGuard, AdminGuard, publicUser } from './auth';
 import {
   CSVProvider,
@@ -415,6 +415,17 @@ export class AdminController {
         ...result,
         player,
       });
+      if (d.designation === 'PRIMARY_KICKER') {
+        const rosters = await tx.roster.findMany({ where: { teamCode: d.teamCode }, include: { fantasyTeam: { include: { owner: true } } } });
+        for (const roster of rosters.filter((r) => r.fantasyTeam.owner.emailLeagueEnabled)) await mailOutbox(tx, {
+          to: roster.fantasyTeam.owner.email,
+          subject: `${d.teamCode} kicker update for ${roster.fantasyTeam.name}`,
+          eyebrow: 'KICKER REPLACEMENT ALERT',
+          title: 'The franchise has a new foot.',
+          copy: `${d.playerName} is now the listed primary kicker for ${d.teamCode}. Your fantasy franchise stays the same, and backups still count automatically.`,
+          url: `${process.env.WEB_URL}/`, button: 'View the kicker field',
+        });
+      }
       return result;
     });
   }

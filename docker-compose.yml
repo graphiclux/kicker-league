@@ -80,7 +80,7 @@ services:
   web:
     <<: *app
     build: {context: ., dockerfile: infrastructure/docker.Dockerfile, target: web}
-    environment: {PORT: '3000', NODE_ENV: production}
+    environment: {PORT: '3000', NODE_ENV: production, LEGAL_API_URL: 'http://api:3001/api'}
     depends_on:
       api: {condition: service_healthy}
     healthcheck:

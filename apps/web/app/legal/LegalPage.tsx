@@ -1,6 +1,3 @@
-'use client';
-import { useEffect, useState } from 'react';
-
 function Content({ value }: { value: string }) {
   const blocks = value.split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean);
   return <div className="legal-content">{blocks.map((block, index) => {
@@ -12,15 +9,21 @@ function Content({ value }: { value: string }) {
   })}</div>;
 }
 
-export default function LegalPage({ documentKey }: { documentKey: 'privacy' | 'terms' }) {
-  const [doc, setDoc] = useState<any>(null), [error, setError] = useState(false);
-  useEffect(() => { fetch(`/api/legal/${documentKey}`).then((r) => r.ok ? r.json() : Promise.reject()).then(setDoc).catch(() => setError(true)); }, [documentKey]);
-  if (!doc && !error) return <main className="legal-shell"><div className="legal-card"><p>Loading the fine print…</p></div></main>;
-  if (error) return <main className="legal-shell"><div className="legal-card"><p>We could not load this page. Please try again.</p><a href="/">Back to clubhouse</a></div></main>;
+export const dynamic = 'force-dynamic';
+
+export default async function LegalPage({ documentKey }: { documentKey: 'privacy' | 'terms' }) {
+  let doc: any;
+  try {
+    const response = await fetch(`${process.env.LEGAL_API_URL || 'http://api:3001/api'}/legal/${documentKey}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Unable to load this document');
+    doc = await response.json();
+  } catch {
+    return <main className="legal-shell"><div className="legal-card"><p>We could not load this page. Please try again.</p><a href="/">Back to clubhouse</a></div></main>;
+  }
   return <main className="legal-shell"><div className="legal-card">
     <header className="legal-header"><a className="legal-brand" href="/"><span>⚑</span><strong>AND IT’S<br />NO GOOD.</strong></a><a href="/">Back to clubhouse ↗</a></header>
     <p className="legal-eyebrow">THE FINE PRINT</p>
-    <Content value={doc.data.content} />
-    <p className="legal-updated">Last updated {new Date(doc.data.updatedAt).toLocaleDateString()}</p>
+    <Content value={doc.content} />
+    <p className="legal-updated">Last updated {new Date(doc.updatedAt).toLocaleDateString()}</p>
   </div></main>;
 }

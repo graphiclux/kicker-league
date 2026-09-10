@@ -756,7 +756,9 @@ function App() {
           )}
         </div>
         <footer>
-          AND IT’S NO GOOD <span>One position. All season. Every miss.</span>
+          <span className="footer-brand">AND IT’S NO GOOD</span>
+          <span>One position. All season. Every miss.</span>
+          <span className="footer-legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></span>
         </footer>
         {mobileMoreOpen && (
           <div className="mobile-more-sheet" role="dialog" aria-label="More navigation">

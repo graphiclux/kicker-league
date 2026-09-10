@@ -777,6 +777,10 @@ footer span {
   font-weight: 400;
   letter-spacing: 0;
 }
+.footer-brand { font-weight: 700 !important; letter-spacing: 1px !important; }
+.footer-legal { display: flex; gap: 18px; }
+.footer-legal a { color: var(--muted); text-decoration: none; letter-spacing: 0; font-weight: 700; }
+.footer-legal a:hover { color: var(--lime); }
 .two-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;

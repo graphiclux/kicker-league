@@ -11,7 +11,7 @@ module.exports = ({ config }) => {
     android: {
       ...config.android,
       package: 'com.anditsnogood.preview',
-      versionCode: profile === 'wifi' ? 2 : 1,
+      versionCode: profile === 'wifi' ? 2 : 3,
     },
     plugins: [...(config.plugins || []), ['./plugins/with-usb-preview', { host }]],
   };

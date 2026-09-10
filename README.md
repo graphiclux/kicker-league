@@ -44,7 +44,9 @@ Local service addresses:
 
 - Application and API: https://anditsnogood.ddev.site/ and `/api`
 - Swagger: https://anditsnogood.ddev.site/api/docs
-- Mailpit: http://localhost:8027 (registration verification and password reset mail)
+- Mailpit: http://localhost:8027 (registration verification and password reset mail when `POSTMARK_SERVER_TOKEN` is empty)
+
+Transactional email uses Postmark when `POSTMARK_SERVER_TOKEN` is set. Configure the verified `hostsites.me` sender in `MAIL_FROM` (for example, `no-reply@hostsites.me`) and keep the token in the ignored root `.env` or production secrets file. Without a Postmark token, local development falls back to Mailpit through SMTP.
 - Adminer: http://localhost:8081 — PostgreSQL server `postgres`, database/user `aing`, password from `.env`
 - PostgreSQL and Redis: internal Docker network only, no published host ports
 

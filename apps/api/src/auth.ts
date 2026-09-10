@@ -106,13 +106,32 @@ export async function sendAuthMail(user: any, purpose: 'VERIFY' | 'RESET') {
       : {}),
   });
   const url = `${process.env.WEB_URL}/?action=${purpose.toLowerCase()}&token=${raw}`;
-  await transport.sendMail({
-    from: process.env.MAIL_FROM,
-    to: user.email,
-    subject:
-      purpose === 'VERIFY'
-        ? "Verify your And It's No Good account"
-        : "Reset your And It's No Good password",
-    text: `${purpose === 'VERIFY' ? 'Verify your email' : 'Reset your password'}: ${url}\nThis link expires in one hour.`,
-  });
+  const subject = purpose === 'VERIFY'
+    ? "Verify your And It's No Good account"
+    : "Reset your And It's No Good password";
+  const text = `${purpose === 'VERIFY' ? 'Verify your email' : 'Reset your password'}: ${url}\nThis link expires in one hour.`;
+  const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;
+  if (postmarkToken) {
+    const response = await fetch('https://api.postmarkapp.com/email', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-Postmark-Server-Token': postmarkToken,
+      },
+      body: JSON.stringify({
+        From: process.env.MAIL_FROM,
+        To: user.email,
+        Subject: subject,
+        TextBody: text,
+        MessageStream: process.env.POSTMARK_MESSAGE_STREAM || 'outbound',
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Postmark rejected the email (${response.status}): ${detail.slice(0, 300)}`);
+    }
+    return;
+  }
+  await transport.sendMail({ from: process.env.MAIL_FROM, to: user.email, subject, text });
 }

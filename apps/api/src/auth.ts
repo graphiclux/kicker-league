@@ -135,6 +135,7 @@ export async function sendAuthMail(user: any, purpose: 'VERIFY' | 'RESET') {
         To: user.email,
         Subject: subject,
         TextBody: text,
+        HtmlBody: html,
         MessageStream: process.env.POSTMARK_MESSAGE_STREAM || 'outbound',
       }),
     });

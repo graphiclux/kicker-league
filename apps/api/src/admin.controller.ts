@@ -25,6 +25,19 @@ import { recalculate } from './scoring.service';
 @Controller('admin')
 @UseGuards(AuthGuard, AdminGuard)
 export class AdminController {
+  @Get('legal') legalDocuments() {
+    return db.legalDocument.findMany({ orderBy: { key: 'asc' } });
+  }
+  @Post('legal/:key') async updateLegal(@Param('key') key: string, @Body() body: unknown, @Req() req: any) {
+    if (!['privacy', 'terms'].includes(key)) throw new Error('Legal document not found');
+    const d = z.object({ title: z.string().trim().min(2).max(120), content: z.string().trim().min(100).max(100000), reason: reasonSchema }).parse(body);
+    return db.$transaction(async (tx) => {
+      const before = await tx.legalDocument.findUniqueOrThrow({ where: { key } });
+      const after = await tx.legalDocument.update({ where: { key }, data: { title: d.title, content: d.content } });
+      await audit(tx, req.user.id, 'LEGAL_DOCUMENT_UPDATED', key, d.reason, before, after);
+      return after;
+    });
+  }
   @Get('email-deliveries') emailDeliveries() {
     return db.outbox.findMany({
       where: { topic: 'mail.send' },

@@ -356,6 +356,7 @@ function App() {
             Draft once. Own the franchise’s kicking position all season, including every backup. No
             trades, waivers, or lineup changes.
           </div>
+          <div className="legal-links"><a href="/privacy">Privacy Policy</a><span>·</span><a href="/terms">Terms of Service</a></div>
         </section>
       </main>
     );
@@ -1465,6 +1466,11 @@ function Admin({
     queryFn: () => api.request('/admin/email-deliveries'),
     enabled: tab === 'email',
   });
+  const legal = useQuery<any[]>({
+    queryKey: ['legal-admin'],
+    queryFn: () => api.request('/admin/legal'),
+    enabled: tab === 'legal',
+  });
   return (
     <>
       <PageTitle
@@ -1473,7 +1479,7 @@ function Admin({
         text="Import once. Score every league. Every correction leaves a record."
       />
       <div className="tabs">
-        {['imports', 'events', 'email', 'audit', 'users', 'settings'].map((t) => (
+        {['imports', 'events', 'email', 'legal', 'audit', 'users', 'settings'].map((t) => (
           <button className={tab === t ? 'active' : 'secondary'} key={t} onClick={() => setTab(t)}>
             {t}
           </button>
@@ -1846,6 +1852,20 @@ function Admin({
             return <div className="notification" key={mail.id}><MailStatus deliveredAt={mail.deliveredAt} attempts={mail.attempts} error={mail.lastError} /><div><strong>{payload.subject || 'Transactional email'}</strong><p>{payload.to} · {mail.deliveredAt ? `Delivered ${new Date(mail.deliveredAt).toLocaleString()}` : 'Pending delivery'}</p>{mail.lastError && <small>{mail.lastError}</small>}</div></div>;
           })}
           {!emailDeliveries.data?.length && <p className="empty-inline">No email deliveries yet.</p>}
+        </section>
+      )}
+      {tab === 'legal' && (
+        <section className="panel">
+          <div className="section-heading"><h3>Public legal pages</h3><span className="muted">Changes are audited</span></div>
+          <p className="muted">Edit the Privacy Policy and Terms of Service shown at <a href="/privacy" target="_blank">/privacy</a> and <a href="/terms" target="_blank">/terms</a>.</p>
+          {legal.data?.map((doc) => (
+            <form className="legal-admin-form" key={doc.key} onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); run(() => api.post(`/admin/legal/${doc.key}`, { title: f.get('title'), content: f.get('content'), reason }), `${doc.title} updated`); }}>
+              <h4>{doc.key === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}</h4>
+              <Field label="Page title"><input name="title" defaultValue={doc.title} maxLength={120} required /></Field>
+              <Field label="Content (plain text with # headings)"><textarea className="legal-editor" name="content" defaultValue={doc.content} minLength={100} maxLength={100000} required /></Field>
+              <button disabled={busy || reason.length < 5}>Save {doc.key}</button>
+            </form>
+          ))}
         </section>
       )}
       {tab === 'users' && (

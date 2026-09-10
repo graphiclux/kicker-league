@@ -269,3 +269,10 @@ model Outbox {
   createdAt DateTime @default(now())
   @@index([deliveredAt,createdAt])
 }
+model LegalDocument {
+  key String @id
+  title String
+  content String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

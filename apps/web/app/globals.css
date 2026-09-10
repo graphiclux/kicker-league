@@ -13,6 +13,15 @@
 * {
   box-sizing: border-box;
 }
+
+@media (max-width: 720px) {
+  .legal-shell { padding: 24px 18px 60px; }
+  .legal-header { padding-bottom: 22px; }
+  .legal-header > a:last-child { font-size: 12px; }
+  .legal-eyebrow { margin-top: 42px; }
+  .legal-content h1 { font-size: 42px; }
+  .legal-content p, .legal-content li { font-size: 15px; line-height: 1.7; }
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -20,6 +29,26 @@ body {
   font-size: 16px;
   line-height: 1.5;
 }
+.legal-shell { min-height: 100vh; padding: 42px 22px 90px; background: var(--bg); }
+.legal-card { max-width: 860px; margin: 0 auto; }
+.legal-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:34px; border-bottom:1px solid var(--line); }
+.legal-header a { color:var(--muted); text-decoration:none; font-weight:700; }
+.legal-header a:hover { color:var(--lime); }
+.legal-brand { display:inline-flex; align-items:center; gap:11px; color:var(--ink) !important; letter-spacing:.7px; line-height:1.05; font-size:13px; }
+.legal-brand span { display:grid; place-items:center; width:39px; height:39px; border:1px solid #59616d; border-radius:10px; color:var(--lime); font-size:22px; transform:rotate(-4deg); }
+.legal-eyebrow { margin:66px 0 20px; color:var(--lime); font-size:12px; letter-spacing:2px; font-weight:800; }
+.legal-content h1 { margin:0 0 38px; color:var(--ink); font-size:clamp(38px, 7vw, 68px); letter-spacing:-2.5px; line-height:1; }
+.legal-content h2 { margin:40px 0 12px; color:var(--ink); font-size:24px; letter-spacing:-.5px; }
+.legal-content p, .legal-content li { color:#c1c8d2; font-size:16px; line-height:1.78; }
+.legal-content p { margin:0 0 18px; }
+.legal-content ul { margin:0 0 24px; padding-left:24px; }
+.legal-updated { margin-top:46px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+.legal-links { display:flex; justify-content:center; align-items:center; gap:10px; margin-top:22px; color:var(--muted); font-size:12px; }
+.legal-links a { color:var(--muted); }
+.legal-links a:hover { color:var(--lime); }
+.legal-admin-form { margin-top:28px; padding-top:26px; border-top:1px solid var(--line); }
+.legal-admin-form h4 { margin:0 0 16px; color:var(--ink); font-size:20px; }
+.legal-editor { min-height:420px; resize:vertical; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; line-height:1.55; }
 button,
 input,
 select,

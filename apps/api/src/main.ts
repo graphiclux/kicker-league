@@ -12,6 +12,7 @@ import { AuthController } from './auth.controller';
 import { LeaguesController } from './leagues.controller';
 import { AdminController } from './admin.controller';
 import { AppController } from './app.controller';
+import { LegalController } from './legal.controller';
 import { AuthGuard, AdminGuard } from './auth';
 import { Realtime } from './realtime';
 @Catch()
@@ -42,7 +43,7 @@ class Errors implements ExceptionFilter {
   }
 }
 @Module({
-  controllers: [AuthController, LeaguesController, AdminController, AppController],
+  controllers: [AuthController, LeaguesController, AdminController, AppController, LegalController],
   providers: [AuthGuard, AdminGuard, Realtime],
 })
 export class AppModule {}

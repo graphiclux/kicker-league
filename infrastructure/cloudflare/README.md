@@ -35,3 +35,9 @@ CORS_ORIGINS=https://aing.hostsites.me
 EXPO_PUBLIC_API_URL=https://aing.hostsites.me/api
 EXPO_PUBLIC_SOCKET_URL=https://aing.hostsites.me
 ```
+
+To build a phone package that uses this public origin, run the existing APK builder with the public profile:
+
+```sh
+AING_MOBILE_PROFILE=public bash infrastructure/scripts/build-pixel-apk.sh
+```

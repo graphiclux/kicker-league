@@ -8,12 +8,13 @@ export GRADLE_USER_HOME=${GRADLE_USER_HOME:-/private/tmp/aing-android-tools/grad
 export AING_MOBILE_PROFILE=${AING_MOBILE_PROFILE:-usb}
 export NODE_ENV=production
 case "$AING_MOBILE_PROFILE" in
-  usb) preview_host=127.0.0.1 ;;
-  wifi) preview_host=${AING_WIFI_HOST:?Set AING_WIFI_HOST to the Mac LAN IP}; export AING_WIFI_HOST ;;
-  *) echo 'AING_MOBILE_PROFILE must be usb or wifi' >&2; exit 1 ;;
+  usb) api_url=http://127.0.0.1:8090/api; socket_url=http://127.0.0.1:8090 ;;
+  wifi) preview_host=${AING_WIFI_HOST:?Set AING_WIFI_HOST to the Mac LAN IP}; export AING_WIFI_HOST; api_url=http://$preview_host:8090/api; socket_url=http://$preview_host:8090 ;;
+  public) api_url=https://aing.hostsites.me/api; socket_url=https://aing.hostsites.me ;;
+  *) echo 'AING_MOBILE_PROFILE must be usb, wifi, or public' >&2; exit 1 ;;
 esac
-export EXPO_PUBLIC_API_URL="http://$preview_host:8090/api"
-export EXPO_PUBLIC_SOCKET_URL="http://$preview_host:8090"
+export EXPO_PUBLIC_API_URL="$api_url"
+export EXPO_PUBLIC_SOCKET_URL="$socket_url"
 apk="artifacts/and-its-no-good-pixel-$AING_MOBILE_PROFILE.apk"
 command -v node >/dev/null
 command -v pnpm >/dev/null

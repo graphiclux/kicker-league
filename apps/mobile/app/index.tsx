@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,9 +35,10 @@ const tabIcons: Record<string, any> = {
   clubhouse: require('../assets/tab-clubhouse.png'),
   draft: require('../assets/tab-draft.png'),
   standings: require('../assets/tab-standings.png'),
-  inbox: require('../assets/tab-inbox.png'),
-  nfl: require('../assets/tab-clubhouse.png'),
-  admin: require('../assets/tab-inbox.png'),
+  inbox: require('../assets/tab-bell.png'),
+  nfl: require('../assets/tab-nfl.png'),
+  admin: require('../assets/tab-admin.png'),
+  rules: require('../assets/tab-rules.png'),
   more: require('../assets/tab-inbox.png'),
 };
 function SelectionMenu({ label, value, options, onSelect }: {
@@ -69,23 +70,17 @@ function SelectionMenu({ label, value, options, onSelect }: {
       <Modal transparent visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={s.sheetBackdrop}><Pressable accessibilityLabel="Close league menu" style={{flex: 1}} onPress={() => setOpen(false)} /><SafeAreaView style={s.sheet}>
           <View style={s.sheetHandle} />
-          <View style={s.menuHeader}>
-            <Text accessibilityRole="header" style={s.title}>{label}</Text>
-            <Button title="Close" secondary onPress={() => setOpen(false)} />
-          </View>
-          <ScrollView contentContainerStyle={s.content}>
-            {options.map((option) => (
-              <Pressable
-                key={option.id}
-                accessibilityRole="button"
-                accessibilityState={{ selected: option.id === value }}
-                style={[s.menuOption, option.id === value && s.menuOptionSelected]}
-                onPress={() => { onSelect(option.id); setOpen(false); }}
-              >
-                <View style={{flex: 1}}><Text style={s.menuValue}>{option.name}</Text>{option.subtitle && <Text style={s.sub}>{option.subtitle}</Text>}</View>
-                {option.id === value && <Text style={s.menuIcon}>✓</Text>}
-              </Pressable>
-            ))}
+          <View style={s.menuHeader}><Text accessibilityRole="header" style={s.clubTitle}>Your leagues</Text><Pressable accessibilityLabel="Close league menu" onPress={() => setOpen(false)} style={s.weekArrow}><Text style={s.arrow}>×</Text></Pressable></View>
+          <Text style={[s.text, {paddingHorizontal: 22, marginBottom: 14}]}>Choose where you’re playing.</Text>
+          <ScrollView contentContainerStyle={{paddingHorizontal: 22, paddingBottom: 20}}>
+            {options.filter(o => !o.id.startsWith('__')).map(option => <Pressable key={option.id} accessibilityRole="button" accessibilityState={{selected: option.id === value}} style={s.menuOption} onPress={() => {onSelect(option.id); setOpen(false);}}>
+              <View style={[s.radio, option.id === value && {backgroundColor:'#F5C451', borderColor:'#F5C451'}]}>{option.id === value && <Text style={{color:'#101318',fontWeight:'700'}}>✓</Text>}</View>
+              <View style={{flex:1}}><Text style={s.menuValue}>{option.name}</Text><Text style={s.sub}>{option.subtitle}</Text></View>
+            </Pressable>)}
+            <View style={{flexDirection:'row',gap:12,marginVertical:20}}>{['+ Create league','Join league'].map(label => <Pressable key={label} accessibilityRole="button" onPress={() => {onSelect('__manage');setOpen(false);}} style={s.outlineAction}><Text style={{color:'#F5C451',fontWeight:'600'}}>{label}</Text></Pressable>)}</View>
+            <Text style={s.label}>LEAGUE TOOLS</Text>
+            {options.filter(o => o.id.startsWith('__') && o.id !== '__manage').map(option => <Pressable key={option.id} accessibilityRole="button" style={[s.line,{gap:12}]} onPress={() => {onSelect(option.id);setOpen(false);}}><Image source={tabIcons[option.id.slice(2)]} style={[s.tabIcon,{tintColor:'#A7AFBB'}]} /><Text style={[s.text,{flex:1}]}>{option.name}</Text><Text style={s.arrow}>›</Text></Pressable>)}
+            <Text style={[s.sub,{textAlign:'center',marginTop:24}]}>One position. All season. Every miss.</Text>
           </ScrollView>
         </SafeAreaView></View>
       </Modal>
@@ -125,6 +120,7 @@ const Input = ({ label, ...props }: React.ComponentProps<typeof TextInput> & { l
 );
 export default function Mobile() {
   const qc = useQueryClient();
+  const scroll = useRef<ScrollView>(null);
   const [user, setUser] = useState<UserView | null>(null),
     [boot, setBoot] = useState(true),
     [busy, setBusy] = useState(false),
@@ -144,6 +140,7 @@ export default function Mobile() {
     [capacity, setCapacity] = useState('12'),
     [invite, setInvite] = useState(''),
     [rankings, setRankings] = useState('');
+  useEffect(() => { scroll.current?.scrollTo({y: 0, animated: false}); }, [screen, leagueId]);
   async function remember(data: any) {
     access = data.accessToken;
     await SecureStore.setItemAsync('aing-refresh', data.refreshToken);
@@ -275,7 +272,7 @@ export default function Mobile() {
     return (
       <SafeAreaView style={s.root}>
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-          <Image source={require('../assets/icon.png')} style={s.brandIcon} />
+          <Image source={require('../assets/header-mark.png')} style={s.brandIcon} />
           <Text style={s.logo}>And it’s no good.</Text>
           <Text style={s.hero}>Great season.{`\n`}Terrible kicks.</Text>
           <Text style={s.sub}>One draft. One kicking position. Every miss matters.</Text>
@@ -342,7 +339,7 @@ export default function Mobile() {
   return (
     <SafeAreaView style={s.root}>
       <View style={s.header}>
-        <Image source={require('../assets/icon.png')} style={s.brandIcon} />
+        <Image source={require('../assets/header-mark.png')} style={s.brandIcon} />
         <View style={{ flex: 1 }}>
           <Text style={s.logo}>AND IT’S NO GOOD</Text>
         </View>
@@ -353,14 +350,12 @@ export default function Mobile() {
             options={[...(leagues.data || []).map((l) => ({ id: l.id, name: l.name, subtitle: `${l.teams.find(t => t.ownerId === user.id)?.name || ''} · ${l.teams.length} teams` })), { id: '__manage', name: '+ Create or join a league' }, { id: '__draft', name: 'Draft room' }, { id: '__rules', name: 'Scoring rules' }, ...(user.role === 'SUPER_ADMIN' ? [{id: '__admin', name: 'Super Admin'}] : [])]}
             onSelect={(id) => { if (id === '__manage') setScreen('leagues'); else if (id.startsWith('__')) setScreen(id.slice(2)); else setLeagueId(id); }} />
       </View>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         {connectionIssue && <Pressable accessibilityRole="button" onPress={() => setConnectionIssue(null)} style={s.connectionNotice}><Text style={s.sub}>{connectionIssue}</Text><Text style={s.noticeDismiss}>Dismiss</Text></Pressable>}
         <View style={s.weekBar}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous week" disabled={week <= 1} onPress={() => setWeek(week - 1)} style={s.weekArrow}><Text style={s.arrow}>‹</Text></Pressable>
           <Text style={s.weekTitle}>WEEK {String(week).padStart(2, '0')}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Previous week" disabled={week <= 1} onPress={() => setWeek(week - 1)} style={[s.weekArrow, week <= 1 && { opacity: .25 }]}><Text style={s.arrow}>‹</Text></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Next week" disabled={week >= 22} onPress={() => setWeek(week + 1)} style={[s.weekArrow, week >= 22 && { opacity: .25 }]}><Text style={s.arrow}>›</Text></Pressable>
-          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next week" disabled={week >= 22} onPress={() => setWeek(week + 1)} style={s.weekArrow}><Text style={s.arrow}>›</Text></Pressable>
         </View>
         {!user.verifiedAt && (
           <View style={s.card}>
@@ -378,42 +373,39 @@ export default function Mobile() {
         )}
         {screen === 'clubhouse' && (
           <>
-            <Pressable accessibilityRole="button" accessibilityLabel="Edit your team name" onPress={() => setScreen('inbox')}><Text style={s.hero}>{my?.name || 'Your clubhouse'} <Text style={s.menuIcon}>✎</Text></Text></Pressable>
-            <Text style={s.sub}>{my?.roster?.teamCode || 'No franchise drafted'} · Your kicking franchise</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Edit your team name" onPress={() => setScreen('inbox')}><Text style={s.clubTitle}>{my?.name || 'Your clubhouse'} <Image source={require('../assets/tab-edit.png')} style={{width:18,height:18,tintColor:'#A7AFBB'}} /></Text></Pressable>
+            <Text style={s.sub}>{nfl.data?.find(t => t.code === my?.roster?.teamCode)?.city || 'Your'} {nfl.data?.find(t => t.code === my?.roster?.teamCode)?.name || 'kicking franchise'} · Your kicking franchise</Text>
             <View style={s.scoreCard}>
-              <View style={s.sectionHeading}>
-                <Text style={s.scoreLabel}>YOUR WEEK</Text>
-                <Text style={s.statusTag}>{league?.status === 'COMPLETE' ? 'ROSTER LOCKED' : league?.status === 'DRAFTING' ? 'DRAFT IN PROGRESS' : 'AWAITING DRAFT'}</Text>
-              </View>
               <View style={s.row}>
                 <View style={{ flex: 1 }}>
                   <Text adjustsFontSizeToFit numberOfLines={1} style={s.score}>{standing.isError ? '—' : pts(my?.weeklyPoints || 0)}</Text>
                   <Text style={s.scoreLabel}>FANTASY POINTS</Text>
                 </View>
                 <View style={s.seasonMetric}>
-                  <Text style={s.scoreLabel}>LEAGUE RANK</Text>
                   <Text style={s.seasonScore}>{my?.rank ? `#${my.rank}` : '—'}<Text style={s.rankOf}> / {league?.teams.length || '—'}</Text></Text>
-                  <Text style={s.scoreLabel}>SEASON {pts(my?.totalPoints || 0)}</Text>
+                  <Text style={s.scoreLabel}>LEAGUE RANK</Text>
+                  <Text style={s.sub}>Season {pts(my?.totalPoints || 0)}</Text>
                 </View>
               </View>
             </View>
-            <View style={s.syncStrip}><Text style={s.statusTag}>{feedStatus.isError || feedStatus.data?.stale ? 'CHECKING CONNECTION' : feedStatus.data?.games.some((g: any) => g.state === 'in') ? '● LIVE' : 'AUTO SYNC'}</Text><Text style={s.sub}>{feedStatus.data?.checkedAt ? `Feed checked ${new Date(feedStatus.data.checkedAt).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}` : 'Waiting for feed status'}</Text><Text style={s.sub}>Scores update automatically</Text></View>
-            <View style={[s.teamStrip, s.card]}>
-              {nfl.data?.find(t => t.code === my?.roster?.teamCode)?.assignments[0]?.player.imageUrl ? <Image source={{uri: nfl.data.find(t => t.code === my?.roster?.teamCode)!.assignments[0].player.imageUrl!}} style={s.kickerAvatar} /> : <View style={s.franchiseBadge}><Text style={s.franchiseCode}>{my?.roster?.teamCode || '—'}</Text></View>}
-              <View style={{ flex: 1 }}><Text style={s.teamName}>{nfl.data?.find(t => t.code === my?.roster?.teamCode)?.assignments[0]?.player.name || 'Kicker to be confirmed'}</Text><Text style={s.sub}>{my?.roster ? 'Kicking position · Backups included' : 'Choose your franchise in the draft'}</Text></View>
+            <View style={s.syncStrip}>
+              <Text style={s.statusTag}>{feedStatus.isError || feedStatus.data?.stale ? 'DELAYED' : feedStatus.data?.games.some((g: any) => g.state === 'in') ? '● LIVE' : '● SYNC'}</Text>
+              <Text style={s.syncText}>{feedStatus.data?.checkedAt ? `Checked ${new Date(feedStatus.data.checkedAt).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}` : 'Connecting…'}</Text>
+              <Text style={[s.syncText, {borderLeftWidth: 1, borderLeftColor: '#47505D', paddingLeft: 8}]}>Updates automatically</Text>
+            </View>
+            <View style={s.kickerCard}>
+              {nfl.data?.find(t => t.code === my?.roster?.teamCode)?.assignments[0]?.player.imageUrl && <Image resizeMode="cover" source={{uri: nfl.data.find(t => t.code === my?.roster?.teamCode)!.assignments[0].player.imageUrl!}} style={s.heroPortrait} />}
+              <View style={{flex: 1}}><Text style={s.teamName}>{nfl.data?.find(t => t.code === my?.roster?.teamCode)?.assignments[0]?.player.name || 'Kicker to be confirmed'}</Text><Text style={s.sub}>{nfl.data?.find(t => t.code === my?.roster?.teamCode)?.city || ''} kicking position</Text><Text style={s.syncText}>Backups included</Text></View>
+              {my?.roster && <Image source={{uri: `https://a.espncdn.com/i/teamlogos/nfl/500/${my.roster.teamCode.toLowerCase()}.png`}} style={s.teamLogo} />}
             </View>
             {!my?.roster && <Button title={league ? 'Go to draft' : 'Create or join a league'} onPress={() => setScreen(league ? 'draft' : 'leagues')} />}
-            <View style={s.sectionHeading}><Text style={s.title}>Every kick tells a story</Text><Text style={s.label}>{events.data?.length || 0} EVENTS</Text></View>
+            <View style={s.sectionHeading}><Text style={s.title}>Every kick tells a story</Text></View>
             {events.data?.length ? (
               events.data.map((e) => (
-                <View style={s.ledgerRow} key={e.id}>
-                  <View style={{ flex: 1 }}>
-                  <Text style={s.eventTitle}>{e.result === 'MISSED' ? 'Missed' : e.result === 'MADE' ? 'Made' : e.result} {e.eventType === 'EXTRA_POINT' ? 'extra point' : `${e.distance ? `${e.distance}-yard ` : ''}field goal`}</Text>
-                  <Text style={s.sub}>
-                    {e.kicker}
-                  </Text>
-                  </View>
-                  <Text style={s.points}>{e.voidedAt ? 'VOID' : pts(e.points)}</Text>
+                <View style={s.kickRow} key={e.id}>
+                  <Text style={[s.kickPoints, {color: e.points > 0 ? '#F5C451' : '#F2F4F7'}]}>{e.voidedAt ? '—' : pts(e.points)}</Text>
+                  <Text style={[s.eventTitle, {flex: 1}]}>{e.result === 'MISSED' ? 'Missed' : e.result === 'MADE' ? 'Made' : e.result} {e.eventType === 'EXTRA_POINT' ? 'extra point' : `${e.distance ? `${e.distance}-yard ` : ''}field goal`}</Text>
+                  <Text style={s.syncText}>{e.occurredAt ? new Date(e.occurredAt).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : ''}</Text>
                 </View>
               ))
             ) : (
@@ -427,12 +419,14 @@ export default function Mobile() {
             <Text style={s.hero}>The whole field.</Text><Text style={s.sub}>Every franchise. Every kick.</Text>
             <View style={s.filters}>{[['all', 'All 32'], ['in', 'Playing'], ['post', 'Final']].map(([id,label]) => <Pressable key={id} accessibilityRole="button" accessibilityState={{selected: nflFilter === id}} onPress={() => setNflFilter(id)} style={[s.filter, nflFilter === id && s.filterActive]}><Text style={[s.text, nflFilter === id && {color: '#101318', fontWeight: '700'}]}>{label}</Text></Pressable>)}</View>
             {feedStatus.data?.stale && <Text style={s.sub}>Game status is delayed. Scores shown are the last saved results.</Text>}
+            {feedStatus.data?.games.slice(0,1).map((g: any) => <View key={g.id} style={s.gameBar}><Text style={s.statusTag}>{g.state === 'in' ? 'LIVE' : 'FINAL'}</Text><Text style={s.text}>{g.teams.map((t:any) => t.code).join(' vs ')}</Text><Text style={s.syncText}>{g.detail}</Text></View>)}
             <Text style={[s.label, {textAlign: 'right', marginVertical: 12}]}>FANTASY PTS · WEEK {week}</Text>
-            {(nfl.data || []).filter(t => nflFilter === 'all' || (!feedStatus.data?.stale && feedStatus.data?.games.some((g: any) => g.state === nflFilter && g.teams.some((c: any) => c.code === t.code)))).map(t => {
+            {[...(nfl.data || [])].sort((a,b) => Number(!!feedStatus.data?.games.some((g:any) => g.teams.some((t:any) => t.code === b.code))) - Number(!!feedStatus.data?.games.some((g:any) => g.teams.some((t:any) => t.code === a.code)))).filter(t => nflFilter === 'all' || (!feedStatus.data?.stale && feedStatus.data?.games.some((g: any) => g.state === nflFilter && g.teams.some((c: any) => c.code === t.code)))).map(t => {
               const game = feedStatus.data?.games.find((g: any) => g.teams.some((c: any) => c.code === t.code));
-              return <View style={[s.ledgerRow, t.code === my?.roster?.teamCode && s.selectedFranchise]} key={t.code}>
+              return <View style={[s.fieldRow, t.code === my?.roster?.teamCode && s.selectedFranchise]} key={t.code}>
+                <Image source={{uri: `https://a.espncdn.com/i/teamlogos/nfl/500/${t.code.toLowerCase()}.png`}} style={{width:30,height:30}} />
                 {t.assignments[0]?.player.imageUrl ? <Image source={{uri: t.assignments[0].player.imageUrl}} style={s.kickerAvatar} /> : <View style={s.franchiseBadge}><Text style={s.franchiseCode}>{t.code}</Text></View>}
-                <View style={{flex: 1}}><Text style={s.teamName}>{t.code} · {t.name}</Text><Text style={s.sub}>{t.assignments[0]?.player.name || 'Kicker to be confirmed'}</Text>{game && <Text style={s.statusTag}>{game.detail}</Text>}</View>
+                <View style={{flex: 1}}><Text style={s.teamName}>{t.code}</Text><Text style={s.sub}>{t.assignments[0]?.player.name || 'Kicker to be confirmed'}</Text></View>
                 <Text style={s.points}>{fieldScores.isError ? '—' : pts(fieldScores.data?.find(v => v.teamCode === t.code)?.points || 0)}</Text>
               </View>;
             })}
@@ -576,7 +570,7 @@ export default function Mobile() {
                 <View style={s.card} key={t.code}>
                   {t.assignments[0]?.player.imageUrl && <Image source={{ uri: t.assignments[0].player.imageUrl }} style={s.kickerAvatar} />}
                   <Text style={s.title}>
-                    {t.code} · {t.name}
+                    {t.code}
                   </Text>
                   <Text style={s.sub}>
                     {t.assignments[0]?.player.name || 'Current kicker to be confirmed'}
@@ -707,30 +701,41 @@ export default function Mobile() {
   );
 }
 const s = StyleSheet.create({
+  clubTitle: {fontSize: 28, lineHeight: 34, fontWeight:'800', color:'#F2F4F7', letterSpacing:-.8, marginTop: 6},
+  radio: {width:28,height:28,borderRadius:14,borderWidth:1.5,borderColor:'#A7AFBB',alignItems:'center',justifyContent:'center'},
+  outlineAction: {flex:1,borderWidth:1,borderColor:'#F5C451',borderRadius:6,minHeight:48,alignItems:'center',justifyContent:'center'},
+  syncText: {fontSize:11, color:'#C1C7D0',lineHeight:16},
+  kickerCard: {flexDirection:'row',alignItems:'center',gap:12,borderWidth:1,borderColor:'#353D49',backgroundColor:'#1A1F27',borderRadius:6,paddingHorizontal:10,minHeight:90, marginBottom:4},
+  heroPortrait: {width:68,height:86,alignSelf:'flex-end'},
+  teamLogo: {width:44,height:44},
+  kickRow: {flexDirection:'row',alignItems:'center',gap:12,minHeight:48,borderBottomWidth:1,borderColor:'#2A3039'},
+  kickPoints: {fontSize:24,fontWeight:'700',minWidth:28},
+  fieldRow: {flexDirection:'row',alignItems:'center',gap:10,minHeight:68,borderBottomWidth:1,borderColor:'#2A3039'},
+  gameBar: {flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:'#242A33',padding:10,marginTop:12,borderRadius:6},
   sheetBackdrop: {flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end'},
-  sheet: {maxHeight: '85%', backgroundColor: '#1A1F27', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12},
+  sheet: {maxHeight: '82%', backgroundColor: '#1A1F27', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12},
   sheetHandle: {width: 44, height: 4, borderRadius: 2, backgroundColor: '#A7AFBB', alignSelf: 'center', marginBottom: 12},
-  syncStrip: {backgroundColor: '#242A33', borderRadius: 8, padding: 12, gap: 2},
+  syncStrip: {flexDirection:'row',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',backgroundColor: '#242A33', borderRadius: 6, paddingHorizontal: 10,paddingVertical:12, gap: 6, marginVertical: 8},
   filters: {flexDirection: 'row', gap: 6, marginTop: 18},
   filter: {flex: 1, alignItems: 'center', paddingVertical: 12, backgroundColor: '#242A33', borderRadius: 6},
   filterActive: {backgroundColor: '#F5C451'},
   selectedFranchise: {borderLeftWidth: 3, borderLeftColor: '#F5C451', paddingLeft: 10, backgroundColor: '#1A1F27'},
   root: { flex: 1, backgroundColor: '#101318' },
-  header: { paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  brandIcon: { width: 28, height: 28, borderRadius: 6 },
+  header: { paddingHorizontal: 18, paddingTop: 2, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  brandIcon: { width: 48, height: 54 },
   edition: { fontSize: 11, color: '#8E959F', fontVariant: ['tabular-nums'] },
-  logo: { fontSize: 13, fontWeight: '900', color: '#F2F4F7', letterSpacing: 1.4 },
-  navigation: { flexShrink: 0, paddingHorizontal: 22 },
-  menuTrigger: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 12, backgroundColor: '#1A1F27', borderRadius: 8, minHeight: 48, borderWidth: 1, borderColor: '#2A3039' },
+  logo: { fontFamily: 'sans-serif-condensed', fontSize: 23, fontWeight: '900', color: '#F2F4F7', letterSpacing: -.7 },
+  navigation: { flexShrink: 0, paddingHorizontal: 18, paddingBottom: 4 },
+  menuTrigger: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#1A1F27', borderRadius: 8, minHeight: 48, borderWidth: 1, borderColor: '#2A3039' },
   menuIcon: { color: '#F5C451', fontSize: 22 },
   menuGlyph: { width: 22, gap: 4, alignItems: 'flex-end' },
-  menuGlyphLine: { width: 22, height: 2, borderRadius: 1, backgroundColor: '#F5C451' },
-  menuGlyphLineShort: { width: 14 },
+  menuGlyphLine: { width: 22, height: 2, borderRadius: 1, backgroundColor: '#F2F4F7' },
+  menuGlyphLineShort: { width: 22 },
   menuValue: { flex: 1, color: '#F2F4F7', fontSize: 16, fontWeight: '600' },
   menuHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22 },
-  menuOption: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, minHeight: 56, borderBottomWidth: 1, borderColor: '#2A3039' },
+  menuOption: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, minHeight: 70, borderBottomWidth: 1, borderColor: '#2A3039' },
   menuOptionSelected: { backgroundColor: '#242A33', borderRadius: 8 },
-  content: { paddingHorizontal: 22, paddingTop: 4, paddingBottom: 24, gap: 12 },
+  content: { paddingHorizontal: 18, paddingTop: 0, paddingBottom: 18, gap: 4 },
   weekBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   weekTitle: { fontSize: 12, color: '#A7AFBB', fontWeight: '700', letterSpacing: 1.4 },
   weekArrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -746,7 +751,7 @@ const s = StyleSheet.create({
   buttonText: { color: '#101318', fontWeight: '700', fontSize: 14 },
   secondary: { backgroundColor: '#242A33' },
   card: { backgroundColor: '#1A1F27', borderRadius: 8, padding: 18, marginVertical: 4 },
-  kickerAvatar: { width: 44, height: 44, borderRadius: 22, marginBottom: 8, borderWidth: 2, borderColor: '#F5C451' },
+  kickerAvatar: { width: 42, height: 48, borderRadius: 4 },
   dangerZone: { borderTopWidth: 1, borderColor: '#49363A', paddingTop: 18, marginTop: 22 },
   offlineNotice: { backgroundColor: '#242A33', borderLeftWidth: 3, borderLeftColor: '#F5C451', borderRadius: 8, padding: 14, marginVertical: 8 },
   connectionNotice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: '#242A33', borderRadius: 8, padding: 12 },
@@ -755,18 +760,18 @@ const s = StyleSheet.create({
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F5C451', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#101318', fontWeight: '900', fontSize: 18 },
-  scoreCard: { paddingBottom: 20, gap: 10, borderBottomWidth: 1, borderColor: '#2A3039' },
+  scoreCard: { paddingVertical: 6, marginBottom: 4 },
   scoreLabel: { color: '#A7AFBB', fontSize: 10, fontWeight: '600', letterSpacing: 1 },
   statusTag: { color: '#F5C451', fontSize: 9, fontWeight: '700', letterSpacing: .7 },
-  seasonMetric: { paddingLeft: 16, gap: 9, maxWidth: '45%' },
+  seasonMetric: { paddingLeft: 24, gap: 3, width: '48%', borderLeftWidth: 1, borderColor: '#353D49' },
   seasonScore: { color: '#F2F4F7', fontSize: 32, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  rankOf: { color: '#8E959F', fontSize: 14, fontWeight: '400' },
+  rankOf: { color: '#F2F4F7', fontSize: 24, fontWeight: '700' },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   ledgerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 12, borderBottomWidth: 1, borderColor: '#2A3039' },
-  eventTitle: { color: '#F2F4F7', fontSize: 15, fontWeight: '600' },
+  eventTitle: { color: '#F2F4F7', fontSize: 14, fontWeight: '400' },
   rank: { fontSize: 18, color: '#8E959F', fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16 },
-  score: { fontSize: 88, fontWeight: '800', color: '#F5C451', letterSpacing: -6, fontVariant: ['tabular-nums'], lineHeight: 116 },
+  score: { fontSize: 82, fontWeight: '800', color: '#F5C451', letterSpacing: -6, fontVariant: ['tabular-nums'], lineHeight: 86 },
   points: { fontSize: 24, fontWeight: '700', color: '#F5C451', fontVariant: ['tabular-nums'] },
   line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#2A3039' },
   teamStrip: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },

@@ -4,9 +4,11 @@ dist/
 .expo/
 .turbo/
 .env
+.env.cloudflare
 .env.*
 !.env.example
 !*.env.example
+!.env.cloudflare.example
 coverage/
 playwright-report/
 test-results/

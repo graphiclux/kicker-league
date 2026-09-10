@@ -1559,6 +1559,7 @@ pre {
     z-index: 30;
     display: flex;
     overflow-x: auto;
+    justify-content: center;
     gap: 3px;
     padding: 7px;
     border: 1px solid #353d49;
@@ -1570,6 +1571,8 @@ pre {
 
   .mobile-bottom-nav button {
     flex: 0 0 68px;
+    align-items: center;
+    text-align: center;
     min-width: 0;
     flex-direction: column;
     gap: 3px;

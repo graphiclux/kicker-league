@@ -18,6 +18,13 @@ import { randomBytes } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { TEAM_CODES, weekSchema } from '../../../packages/core/src';
 const redis = new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: 1 });
+function currentNflWeek(year: number) {
+  const laborDay = new Date(Date.UTC(year, 8, 1));
+  while (laborDay.getUTCDay() !== 1) laborDay.setUTCDate(laborDay.getUTCDate() + 1);
+  const kickoff = new Date(laborDay);
+  kickoff.setUTCDate(kickoff.getUTCDate() + 3);
+  return Math.max(1, Math.min(18, Math.floor((Date.now() - kickoff.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1));
+}
 @Controller()
 export class AppController {
   @Get('nfl-status') async nflStatus(@Query() query: any) {
@@ -45,7 +52,10 @@ export class AppController {
     }
   }
   @Get('seasons') seasons() {
-    return db.season.findMany({ include: { rule: true, weeks: true }, orderBy: { year: 'desc' } });
+    return db.season.findMany({ include: { rule: true, weeks: true }, orderBy: { year: 'desc' } }).then((seasons) => seasons.map((season) => ({
+      ...season,
+      currentWeek: season.year === new Date().getUTCFullYear() ? currentNflWeek(season.year) : 18,
+    })));
   }
   @Get('nfl-teams') teams() {
     return db.nflTeam.findMany({

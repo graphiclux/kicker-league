@@ -84,6 +84,9 @@ function App() {
   });
   const league = leagues.data?.find((l) => l.id === leagueId) || leagues.data?.[0];
   const season = seasonOverride || league?.season || seasons.data?.[0]?.year || 2026;
+  const selectedSeason = seasons.data?.find((s) => s.year === season),
+    weekLimit = Math.min(18, selectedSeason?.currentWeek || 18);
+  useEffect(() => { if (week > weekLimit) setWeek(weekLimit); }, [week, weekLimit]);
   const standings = useQuery<FantasyTeamView[]>({
     queryKey: ['standings', league?.id, week],
     queryFn: () => api.request(`/leagues/${league!.id}/standings?week=${week}`),
@@ -434,7 +437,7 @@ function App() {
           </div>
           <div className="top-controls">
             <select aria-label="Selected season" value={season} onChange={(e) => setSeasonOverride(Number(e.target.value))}>
-              {seasons.data?.map((s) => <option value={s.year} key={s.year}>{s.year} Season</option>)}
+              {seasons.data?.filter((s) => s.status === 'ACTIVE').map((s) => <option value={s.year} key={s.year}>{s.year} Season</option>)}
             </select>
             <select
               aria-label="Selected league"
@@ -455,7 +458,7 @@ function App() {
               value={week}
               onChange={(e) => setWeek(Number(e.target.value))}
             >
-              {Array.from({ length: 22 }, (_, i) => (
+              {Array.from({ length: weekLimit }, (_, i) => (
                 <option key={i + 1} value={i + 1}>
                   Week {i + 1}
                 </option>

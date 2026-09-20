@@ -1040,6 +1040,8 @@ footer span {
   margin-left: auto;
   font-size: 12px;
 }
+.inline-email-form { display:flex; align-items:center; gap:8px; margin-top:10px; max-width:620px; }
+.inline-email-form input { flex:1; min-width:220px; }
 .notification small {
   font-size: 10px;
 }

@@ -37,7 +37,7 @@ export function commissioner(l: { commissionerId: string }, u: string) {
 export class LeaguesController {
   @Get() list(@Req() req: any) {
     return db.league.findMany({
-      where: { teams: { some: { ownerId: req.user.id } } },
+      where: { status: { not: 'ARCHIVED' }, teams: { some: { ownerId: req.user.id } } },
       include: { teams: { include: { roster: true } } },
       orderBy: { createdAt: 'desc' },
     });

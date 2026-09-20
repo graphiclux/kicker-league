@@ -337,6 +337,18 @@ export class AdminController {
       return { ok: true };
     });
   }
+  @Post('users/:id/email') async updateEmail(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    const d = z.object({ email: z.string().trim().email().transform((value) => value.toLowerCase()), reason: reasonSchema }).parse(body);
+    return db.$transaction(async (tx) => {
+      const old = await tx.user.findUniqueOrThrow({ where: { id } });
+      if (old.role === 'SUPER_ADMIN' && id !== req.user.id)
+        throw new Error('Super Admin accounts can only be changed by the account owner');
+      const updated = await tx.user.update({ where: { id }, data: { email: d.email, verifiedAt: null } });
+      await tx.session.updateMany({ where: { userId: id }, data: { revokedAt: new Date() } });
+      await audit(tx, req.user.id, 'USER_EMAIL_UPDATED', id, d.reason, { email: old.email }, { email: updated.email });
+      return { ...publicUser(updated), suspended: updated.suspended };
+    });
+  }
   @Get('leagues') leagues() {
     return db.league.findMany({
       include: { _count: { select: { teams: true } } },

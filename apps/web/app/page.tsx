@@ -1880,6 +1880,10 @@ function Admin({
                 <p>
                   {u.email} · {u.role}
                 </p>
+                <form className="inline-email-form" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); run(() => api.post(`/admin/users/${u.id}/email`, { email: f.get('email'), reason }), 'Email address updated'); }}>
+                  <input name="email" type="email" defaultValue={u.email} aria-label={`Email for ${u.displayName}`} required />
+                  <button className="secondary" disabled={busy || reason.length < 5}>Save email</button>
+                </form>
               </div>
               {u.role !== 'SUPER_ADMIN' && (
                 <button

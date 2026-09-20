@@ -360,6 +360,16 @@ export class AdminController {
       return { ...publicUser(updated), suspended: updated.suspended };
     });
   }
+  @Post('users/:id/role') async updateRole(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    const d = z.object({ role: z.enum(['USER', 'SUPER_ADMIN']), reason: reasonSchema }).parse(body);
+    if (id === req.user.id && d.role !== 'SUPER_ADMIN') throw new Error('Cannot remove your own Super Admin access');
+    return db.$transaction(async (tx) => {
+      const old = await tx.user.findUniqueOrThrow({ where: { id } });
+      const updated = await tx.user.update({ where: { id }, data: { role: d.role } });
+      await audit(tx, req.user.id, 'USER_ROLE_CHANGED', id, d.reason, { role: old.role }, { role: updated.role });
+      return { ...publicUser(updated), suspended: updated.suspended };
+    });
+  }
   @Get('leagues') leagues() {
     return db.league.findMany({
       include: { _count: { select: { teams: true } } },

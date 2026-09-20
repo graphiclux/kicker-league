@@ -755,7 +755,7 @@ function App() {
             </>
           )}
           {screen === 'admin' && user.role === 'SUPER_ADMIN' && (
-            <Admin season={season} week={week} run={run} busy={busy} nfl={nfl.data || []} />
+            <Admin user={user} season={season} week={week} run={run} busy={busy} nfl={nfl.data || []} />
           )}
         </div>
         <footer>
@@ -1427,12 +1427,14 @@ function Nfl({ nfl, season, week }: { nfl: NflTeamView[]; season: number; week: 
   );
 }
 function Admin({
+  user,
   season,
   week,
   run,
   busy,
   nfl,
 }: {
+  user: UserView;
   season: number;
   week: number;
   run: Run;
@@ -1888,6 +1890,9 @@ function Admin({
                   <input name="email" type="email" defaultValue={u.email} aria-label={`Email for ${u.displayName}`} required />
                   <button className="secondary" disabled={busy || reason.length < 5}>Save email</button>
                 </form>
+                <button className="secondary admin-role-button" disabled={busy || reason.length < 5 || u.id === user.id} onClick={() => run(() => api.post(`/admin/users/${u.id}/role`, { role: u.role === 'SUPER_ADMIN' ? 'USER' : 'SUPER_ADMIN', reason }), u.role === 'SUPER_ADMIN' ? 'Super Admin access removed' : 'Super Admin access granted')}>
+                  {u.role === 'SUPER_ADMIN' ? 'Remove Super Admin' : 'Make Super Admin'}
+                </button>
               </div>
               {u.role !== 'SUPER_ADMIN' && (
                 <button

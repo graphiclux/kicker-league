@@ -311,6 +311,7 @@ export class AdminController {
   }
   @Get('users') async users() {
     return (await db.user.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
       take: 200,
       include: { teams: { include: { league: true, roster: true }, orderBy: { name: 'asc' } } },

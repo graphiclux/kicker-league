@@ -1042,6 +1042,9 @@ footer span {
 }
 .inline-email-form { display:flex; align-items:center; gap:8px; margin-top:10px; max-width:620px; }
 .inline-email-form input { flex:1; min-width:220px; }
+.admin-user-teams { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.admin-user-teams span { display:inline-block; padding:5px 8px; border:1px solid var(--line); border-radius:6px; color:var(--muted); font-size:11px; }
+.admin-user-teams span strong { color:var(--ink); font-size:11px; }
 .notification small {
   font-size: 10px;
 }

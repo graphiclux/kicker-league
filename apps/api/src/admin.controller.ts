@@ -310,9 +310,19 @@ export class AdminController {
     });
   }
   @Get('users') async users() {
-    return (await db.user.findMany({ orderBy: { createdAt: 'desc' }, take: 200 })).map((u) => ({
+    return (await db.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { teams: { include: { league: true, roster: true }, orderBy: { name: 'asc' } } },
+    })).map((u) => ({
       ...publicUser(u),
       suspended: u.suspended,
+      teams: u.teams.map((team) => ({
+        name: team.name,
+        leagueName: team.league.name,
+        leagueStatus: team.league.status,
+        teamCode: team.roster?.teamCode ?? null,
+      })),
     }));
   }
   @Post('users/:id') async user(@Param('id') id: string, @Body() body: any, @Req() req: any) {

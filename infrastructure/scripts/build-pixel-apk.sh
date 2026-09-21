@@ -21,7 +21,7 @@ command -v pnpm >/dev/null
 stage=$(mktemp -d /private/tmp/aing-apk.XXXXXX)
 tar --exclude=node_modules --exclude=.next --exclude=dist --exclude=.expo --exclude=android --exclude=ios --exclude=.env -cf - apps packages package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.json prisma | tar -xf - -C "$stage"
 cd "$stage"
-pnpm install --frozen-lockfile --prod=false
+pnpm install ${AING_PNPM_INSTALL_FLAGS:---frozen-lockfile} --prod=false
 pnpm --filter @aing/mobile typecheck
 pnpm --filter @aing/mobile exec expo prebuild --platform android --no-install
 cd apps/mobile/android

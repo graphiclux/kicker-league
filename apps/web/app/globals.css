@@ -85,6 +85,10 @@ summary:focus-visible {
   outline: 3px solid #759b12;
   outline-offset: 3px;
 }
+.password-field { position:relative; display:flex; align-items:center; }
+.password-field input { width:100%; padding-right:46px; }
+.password-toggle { position:absolute; right:8px; display:grid; place-items:center; width:32px; height:32px; padding:0; color:var(--muted); background:transparent; border:0; }
+.password-toggle:hover { color:var(--ink); background:transparent; }
 input,
 select,
 textarea {

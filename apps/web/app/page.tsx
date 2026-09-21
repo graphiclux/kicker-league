@@ -20,6 +20,8 @@ import {
   Upload,
   Lock,
   Unlock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import {
   ApiClient,
@@ -63,6 +65,7 @@ function App() {
     [mobileMoreOpen, setMobileMoreOpen] = useState(false),
     [busy, setBusy] = useState(false);
   const [teamNameEdit, setTeamNameEdit] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [authMode, setAuthMode] = useState('login'),
     [authAction, setAuthAction] = useState(''),
     [authToken, setAuthToken] = useState('');
@@ -215,13 +218,12 @@ function App() {
           >
             {authAction !== 'verify' && (
               <Field label="New password">
-                <input
-                  type="password"
-                  minLength={12}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="password-field">
+                  <input type={showResetPassword ? 'text' : 'password'} minLength={12} required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+                  <button type="button" className="password-toggle" aria-label={showResetPassword ? 'Hide password' : 'Show password'} onClick={() => setShowResetPassword((visible) => !visible)}>
+                    {showResetPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
               </Field>
             )}
             <button disabled={busy}>

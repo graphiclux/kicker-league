@@ -98,7 +98,7 @@ export class AdminGuard implements CanActivate {
 }
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
-const isPublicMailbox = (address: string) => {
+export const isPublicMailbox = (address: string) => {
   const domain = address.trim().toLowerCase().split('@').pop() || '';
   return Boolean(domain && domain.includes('.') && !['localhost', 'local', 'test', 'example.test', 'invalid'].includes(domain) && !domain.endsWith('.local') && !domain.endsWith('.test'));
 };

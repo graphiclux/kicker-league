@@ -4,7 +4,7 @@ import { parse as parseCsv } from 'csv-parse/sync';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { z } from 'zod';
 import { db, audit, json, lockWeek, outbox, mailOutbox } from './db';
-import { AuthGuard, AdminGuard, publicUser } from './auth';
+import { AuthGuard, AdminGuard, publicUser, isPublicMailbox } from './auth';
 import {
   CSVProvider,
   NflverseProvider,
@@ -354,9 +354,10 @@ export class AdminController {
       const old = await tx.user.findUniqueOrThrow({ where: { id } });
       if (old.role === 'SUPER_ADMIN' && id !== req.user.id)
         throw new Error('Super Admin accounts can only be changed by the account owner');
-      const updated = await tx.user.update({ where: { id }, data: { email: d.email, verifiedAt: null } });
+      const reactivated = old.suspended && !isPublicMailbox(old.email) && isPublicMailbox(d.email);
+      const updated = await tx.user.update({ where: { id }, data: { email: d.email, verifiedAt: null, ...(reactivated ? { suspended: false } : {}) } });
       await tx.session.updateMany({ where: { userId: id }, data: { revokedAt: new Date() } });
-      await audit(tx, req.user.id, 'USER_EMAIL_UPDATED', id, d.reason, { email: old.email }, { email: updated.email });
+      await audit(tx, req.user.id, 'USER_EMAIL_UPDATED', id, d.reason, { email: old.email, suspended: old.suspended }, { email: updated.email, suspended: updated.suspended });
       return { ...publicUser(updated), suspended: updated.suspended };
     });
   }

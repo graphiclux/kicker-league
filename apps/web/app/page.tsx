@@ -1448,6 +1448,7 @@ function Admin({
     [reason, setReason] = useState(''),
     [preview, setPreview] = useState<any>(null),
     [team, setTeam] = useState('BUF'),
+    [userReason, setUserReason] = useState(''),
     [rule, setRule] = useState({ ...defaultRules });
   const imports = useQuery<any[]>({
     queryKey: ['imports'],
@@ -1878,6 +1879,9 @@ function Admin({
       {tab === 'users' && (
         <section className="panel">
           <h3>Platform accounts</h3>
+          <Field label="Reason for account change (required)">
+            <input value={userReason} onChange={(e) => setUserReason(e.target.value)} placeholder="e.g. Assigning the correct team owner" minLength={5} maxLength={500} />
+          </Field>
           {users.data?.map((u) => (
             <div className="notification" key={u.id}>
               <div>
@@ -1886,21 +1890,21 @@ function Admin({
                   {u.email} · {u.role}
                 </p>
                 {u.teams?.length ? <div className="admin-user-teams">{u.teams.map((team: any) => <span key={`${team.leagueName}-${team.name}`}><strong>{team.name}</strong>{team.teamCode ? ` · ${team.teamCode}` : ''} · {team.leagueName}</span>)}</div> : <small className="muted">No fantasy team assigned</small>}
-                <form className="inline-email-form" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); run(() => api.post(`/admin/users/${u.id}/email`, { email: f.get('email'), reason }), 'Email address updated'); }}>
+                <form className="inline-email-form" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); run(() => api.post(`/admin/users/${u.id}/email`, { email: f.get('email'), reason: userReason }), 'Email address updated'); }}>
                   <input name="email" type="email" defaultValue={u.email} aria-label={`Email for ${u.displayName}`} required />
-                  <button className="secondary" disabled={busy || reason.length < 5}>Save email</button>
+                  <button className="secondary" disabled={busy || userReason.trim().length < 5}>Save email</button>
                 </form>
-                <button className="secondary admin-role-button" disabled={busy || reason.length < 5 || u.id === user.id} onClick={() => run(() => api.post(`/admin/users/${u.id}/role`, { role: u.role === 'SUPER_ADMIN' ? 'USER' : 'SUPER_ADMIN', reason }), u.role === 'SUPER_ADMIN' ? 'Super Admin access removed' : 'Super Admin access granted')}>
+                <button className="secondary admin-role-button" disabled={busy || userReason.trim().length < 5 || u.id === user.id} onClick={() => run(() => api.post(`/admin/users/${u.id}/role`, { role: u.role === 'SUPER_ADMIN' ? 'USER' : 'SUPER_ADMIN', reason: userReason }), u.role === 'SUPER_ADMIN' ? 'Super Admin access removed' : 'Super Admin access granted')}>
                   {u.role === 'SUPER_ADMIN' ? 'Remove Super Admin' : 'Make Super Admin'}
                 </button>
               </div>
               {u.role !== 'SUPER_ADMIN' && (
                 <button
                   className="secondary"
-                  disabled={busy || reason.length < 5}
+                  disabled={busy || userReason.trim().length < 5}
                   onClick={() =>
                     run(
-                      () => api.post(`/admin/users/${u.id}`, { suspended: !u.suspended, reason }),
+                      () => api.post(`/admin/users/${u.id}`, { suspended: !u.suspended, reason: userReason }),
                       'Account status updated',
                     )
                   }

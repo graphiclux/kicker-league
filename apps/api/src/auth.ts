@@ -104,6 +104,9 @@ const isPublicMailbox = (address: string) => {
 };
 
 export async function sendAuthMail(user: any, purpose: 'VERIFY' | 'RESET') {
+  // Development/test domains must never receive mail, including through
+  // Mailpit. Public mailboxes are the only addresses eligible for delivery.
+  if (!isPublicMailbox(user.email)) return;
   const raw = token();
   await db.authToken.create({
     data: { userId: user.id, hash: hash(raw), purpose, expiresAt: new Date(Date.now() + 3600000) },
@@ -166,6 +169,9 @@ export async function sendProductMail(input: {
   url?: string;
   button?: string;
 }) {
+  // Keep placeholder and test recipients completely out of every mail path.
+  // Real addresses added by an admin continue through Postmark normally.
+  if (!isPublicMailbox(input.to)) return;
   const url = input.url ? escapeHtml(input.url) : '';
   const button = input.button && input.url
     ? `<a href="${url}" style="display:inline-block;background:#f5c451;color:#101318;text-decoration:none;border-radius:9px;padding:14px 20px;font-size:15px;font-weight:800">${escapeHtml(input.button)} &nbsp;↗</a>`

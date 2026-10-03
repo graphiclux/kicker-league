@@ -4,6 +4,19 @@ The complete stack is self-hosted. No hosted database or Vercel dependency is re
 
 Use a VPS with at least 4 GB RAM for the runtime (8 GB recommended when building locally), Docker Engine and Compose v2+, public DNS pointed to it, and SSH key access. Restrict inbound traffic to SSH from approved addresses and public 80/443. Internal databases have no published ports. Keep the server patched and configure off-host monitoring of `/api/health`, worker heartbeat and disk space.
 
+## Sharing an OVH server with another website
+
+The default production Compose file binds Nginx to host ports 80 and 443 for a server dedicated to this app. If another site already owns those ports, use the existing host reverse proxy for the new subdomain and bind this stack to localhost instead. Add these values to `.env.production`:
+
+```dotenv
+AING_NGINX_HTTP_BIND=127.0.0.1
+AING_NGINX_HTTP_PORT=18080
+AING_NGINX_HTTPS_PORT=18443
+AING_NGINX_CONFIG=./nginx.proxy.conf.template
+```
+
+Then configure the server's existing Nginx, Caddy, or Traefik instance to route the new subdomain to `http://127.0.0.1:18080`, preserving the `Host`, `Upgrade`, `Connection`, `X-Forwarded-For`, and `X-Forwarded-Proto` headers. Let that existing proxy obtain and renew the certificate for the subdomain. Do not expose port 18080 publicly. This mode leaves the current website's listeners and certificate management unchanged.
+
 ## Release
 
 1. Run the local checks and commit/tag a release.

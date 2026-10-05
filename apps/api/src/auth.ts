@@ -100,7 +100,30 @@ const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
 export const isPublicMailbox = (address: string) => {
   const domain = address.trim().toLowerCase().split('@').pop() || '';
-  return Boolean(domain && domain.includes('.') && !['localhost', 'local', 'test', 'example.test', 'invalid'].includes(domain) && !domain.endsWith('.local') && !domain.endsWith('.test'));
+  const reservedDomains = new Set([
+    'localhost',
+    'local',
+    'test',
+    'invalid',
+    'example.com',
+    'example.net',
+    'example.org',
+  ]);
+  const reservedSuffixes = [
+    '.localhost',
+    '.local',
+    '.test',
+    '.invalid',
+    '.example.com',
+    '.example.net',
+    '.example.org',
+  ];
+  return Boolean(
+    domain &&
+      domain.includes('.') &&
+      !reservedDomains.has(domain) &&
+      !reservedSuffixes.some((suffix) => domain.endsWith(suffix)),
+  );
 };
 
 export async function sendAuthMail(user: any, purpose: 'VERIFY' | 'RESET') {

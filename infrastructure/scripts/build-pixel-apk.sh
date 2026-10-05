@@ -10,7 +10,7 @@ export NODE_ENV=production
 case "$AING_MOBILE_PROFILE" in
   usb) api_url=http://127.0.0.1:8090/api; socket_url=http://127.0.0.1:8090 ;;
   wifi) preview_host=${AING_WIFI_HOST:?Set AING_WIFI_HOST to the Mac LAN IP}; export AING_WIFI_HOST; api_url=http://$preview_host:8090/api; socket_url=http://$preview_host:8090 ;;
-  public) api_url=https://aing.hostsites.me/api; socket_url=https://aing.hostsites.me ;;
+  public) api_url=https://play.anditsnogood.com/api; socket_url=https://play.anditsnogood.com ;;
   *) echo 'AING_MOBILE_PROFILE must be usb, wifi, or public' >&2; exit 1 ;;
 esac
 export EXPO_PUBLIC_API_URL="$api_url"
@@ -19,7 +19,12 @@ apk="artifacts/and-its-no-good-pixel-$AING_MOBILE_PROFILE.apk"
 command -v node >/dev/null
 command -v pnpm >/dev/null
 stage=$(mktemp -d /private/tmp/aing-apk.XXXXXX)
-tar --exclude=node_modules --exclude=.next --exclude=dist --exclude=.expo --exclude=android --exclude=ios --exclude=.env -cf - apps packages package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.json prisma | tar -xf - -C "$stage"
+tar --exclude=node_modules --exclude=.next --exclude=dist --exclude=.expo --exclude=android --exclude=ios --exclude=.env -cf - apps packages package.json pnpm-workspace.yaml tsconfig.json prisma | tar -xf - -C "$stage"
+if [ -f "$repo/pnpm-lock.yaml" ]; then
+  cp "$repo/pnpm-lock.yaml" "$stage/pnpm-lock.yaml"
+else
+  git -C "$repo" show HEAD:pnpm-lock.yaml > "$stage/pnpm-lock.yaml"
+fi
 cd "$stage"
 pnpm install ${AING_PNPM_INSTALL_FLAGS:---frozen-lockfile} --prod=false
 pnpm --filter @aing/mobile typecheck

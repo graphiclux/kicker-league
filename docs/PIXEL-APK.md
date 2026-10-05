@@ -80,6 +80,10 @@ physical-device verification of the newer Wi-Fi build is recorded above.
 
 ## Rebuild
 
+Build a public-server APK with `AING_MOBILE_PROFILE=public
+bash infrastructure/scripts/build-pixel-apk.sh`. It uses
+`https://play.anditsnogood.com` for the API, live updates and legal pages.
+
 `bash infrastructure/scripts/build-pixel-apk.sh` creates an isolated temporary
 source copy, installs locked dependencies, generates Android sources, builds a
 release APK, and signs it with the private preview key in `.local-signing/`.
